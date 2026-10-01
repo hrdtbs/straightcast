@@ -1,0 +1,10 @@
+bin/
+*.exe
+/straightcast
+auto.crt
+auto.key
+*.log
+node_modules/
+dist/
+.DS_Store
+agent-tools/

@@ -27,7 +27,7 @@ func Handler(ctrl Controller) http.Handler {
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
 		page, err := files.ReadFile("page.html")
 		if err != nil {
-			http.Error(w, "画面が読めない", http.StatusInternalServerError)
+			http.Error(w, "画面を読めません", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -43,12 +43,12 @@ func Handler(ctrl Controller) http.Handler {
 	mux.HandleFunc("POST /api/start", func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "リクエストが読めない"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "リクエストを読めません"})
 			return
 		}
 		var settings model.Settings
 		if err := json.Unmarshal(body, &settings); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "設定の形式が不正"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "設定の形式が不正です"})
 			return
 		}
 		if err := ctrl.Apply(settings); err != nil {

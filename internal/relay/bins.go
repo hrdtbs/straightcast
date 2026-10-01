@@ -33,7 +33,7 @@ func MediaMTXAsset(goos, goarch string) (archiveName, binaryName string, err err
 		"windows/amd64": "windows_amd64.zip",
 	}[key]
 	if suffix == "" {
-		return "", "", fmt.Errorf("この OS 用の MediaMTX が無い: %s", key)
+		return "", "", fmt.Errorf("このOS用のMediaMTXはありません: %s", key)
 	}
 	return "mediamtx_" + mediaMTXVersion + "_" + suffix, binaryName, nil
 }
@@ -53,7 +53,7 @@ func FindFFmpeg(binDir string) (string, error) {
 	}
 	path, err := exec.LookPath(name)
 	if err != nil {
-		return "", fmt.Errorf("ffmpeg が無い。Windows は https://www.gyan.dev/ffmpeg/builds/ の essentials を PATH か bin に置く")
+		return "", fmt.Errorf("ffmpegがありません。Windowsではhttps://www.gyan.dev/ffmpeg/builds/ のessentialsをPATHかbinに置いてください")
 	}
 	return path, nil
 }
@@ -97,7 +97,7 @@ func EnsureMediaMTX(binDir string) (string, error) {
 		_ = os.Chmod(dest, 0o755)
 	}
 	if !fileExists(dest) {
-		return "", fmt.Errorf("MediaMTX を展開できない")
+		return "", fmt.Errorf("MediaMTXを展開できません")
 	}
 	return dest, nil
 }
@@ -111,11 +111,11 @@ func download(url, dest string) error {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	response, err := client.Get(url)
 	if err != nil {
-		return fmt.Errorf("MediaMTX のダウンロードに失敗: %w", err)
+		return fmt.Errorf("MediaMTXのダウンロードに失敗しました: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("MediaMTX のダウンロードに失敗 (%d)", response.StatusCode)
+		return fmt.Errorf("MediaMTXのダウンロードに失敗しました (%d)", response.StatusCode)
 	}
 	file, err := os.Create(dest)
 	if err != nil {
@@ -148,7 +148,7 @@ func extractTarGZ(archivePath, destDir, binaryName string) error {
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
-			return fmt.Errorf("アーカイブに %s が無い", binaryName)
+			return fmt.Errorf("アーカイブに%sがありません", binaryName)
 		}
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func extractZip(archivePath, destDir, binaryName string) error {
 		_ = body.Close()
 		return err
 	}
-	return fmt.Errorf("アーカイブに %s が無い", binaryName)
+	return fmt.Errorf("アーカイブに%sがありません", binaryName)
 }
 
 func writeFile(path string, reader io.Reader, mode os.FileMode) error {

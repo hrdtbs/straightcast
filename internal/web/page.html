@@ -156,7 +156,7 @@
       <p class="eyebrow">local rtsp</p>
       <h1>Straightcast</h1>
       <p class="lead">
-        画面を H.264 にして、この PC の RTSP に出す。Windows は GPU のエンコーダを使う。
+        このPCの画面をH.264にして、ローカルのRTSPへ出せます。Windowsで使うのはGPUのエンコーダです。
       </p>
 
       <section class="tally" role="status" aria-live="polite">
@@ -164,7 +164,7 @@
         <div>
           <p class="phase" id="phase">起動しています</p>
           <p class="meta" id="meta"></p>
-          <p class="sub" id="note">起動中。</p>
+          <p class="sub" id="note">起動しています。</p>
         </div>
       </section>
       <p class="alert" id="alert" role="alert" hidden></p>
@@ -172,15 +172,15 @@
       <div class="urls">
         <article>
           <h2>TCP（rtspt）</h2>
-          <p class="url" id="tcp-url">準備中</p>
-          <button type="button" id="copy-tcp">URL をコピー</button>
-          <p class="hint">TCP。コピーしたあとはタブを閉じていい。</p>
+          <p class="url" id="tcp-url">準備しています</p>
+          <button type="button" id="copy-tcp">URLをコピー</button>
+          <p class="hint">TCPです。URLをコピーしたあとは、このタブを閉じてください。</p>
         </article>
         <article>
           <h2>UDP（rtsp）</h2>
-          <p class="url" id="udp-url">準備中</p>
-          <button type="button" id="copy-udp">URL をコピー</button>
-          <p class="hint">UDP。届かないことがある。届いても TCP より遅れやすい。</p>
+          <p class="url" id="udp-url">準備しています</p>
+          <button type="button" id="copy-udp">URLをコピー</button>
+          <p class="hint">UDPです。届かないことがあります。届いた場合も、TCPより遅れます。</p>
         </article>
       </div>
 
@@ -189,7 +189,7 @@
           <label>配信 ID
             <input id="stream-id" name="id" autocomplete="off" spellcheck="false" required pattern="[a-z0-9][a-z0-9-]{2,62}" />
           </label>
-          <label>URL に出すホスト
+          <label>URLに出すホスト
             <input id="host" name="host" autocomplete="off" spellcheck="false" value="127.0.0.1" />
           </label>
           <label>フレームレート
@@ -203,7 +203,7 @@
           <label>ビットレート（kbps）
             <input id="bitrate" name="bitrate" type="number" min="800" max="12000" step="100" value="2500" />
           </label>
-          <label>モニター番号（0 がメイン）
+          <label>モニター番号（0がメイン）
             <input id="monitor" name="monitor" type="number" min="0" max="8" step="1" value="0" />
           </label>
           <label>エンコーダ
@@ -216,7 +216,7 @@
             </select>
           </label>
         </div>
-        <p class="hint">待ちは 1 フレームくらい。30fps で約 33ms、60fps で約 17ms。60 はエンコードが倍。</p>
+        <p class="hint">待ち時間は1フレーム程度です。30fpsでは約33ms、60fpsでは約17msになります。60fpsではエンコードの処理が2倍です。</p>
         <div class="actions">
           <button type="submit" id="apply">配信を開始</button>
           <button type="button" class="ghost" id="stop">停止</button>
@@ -225,22 +225,18 @@
 
       <section class="why">
         <h2>エンコード</h2>
-        <ul>
-          <li>Windows は ddagrab。縮小せず NVENC、Quick Sync、AMF の順。無ければ libx264。</li>
-          <li>B フレームなし、lookahead なし。VBV は 1 フレーム。</li>
-          <li>キーフレームは約 1 秒。長くすると、後から繋いだ側が映像を受け取れない。</li>
-          <li>音声なし。</li>
-          <li>中継はこの PC の中だけ。プレビューは出さない。</li>
-        </ul>
+        <p>Windowsではddagrabで画面を取ります。縮小はしません。エンコーダはNVENC、Quick Sync、AMFの順です。いずれも無い場合はlibx264を使います。</p>
+        <p>Bフレームとlookaheadは無効です。VBVバッファは1フレーム分になります。キーフレーム間隔は約1秒です。</p>
+        <p>間隔を長くすると、後から接続したクライアントは映像を受け取れません。音声トラックは無しです。この画面は配信中も映像をデコードしません。</p>
       </section>
-      <p class="foot">この画面は映像をデコードしない。</p>
+      <p class="foot">プレビュー用のデコードは行いません。</p>
     </main>
     <script>
       const phaseText = {
         starting: "起動しています",
         live: "配信中",
-        stopped: "止まっています",
-        error: "エラー",
+        stopped: "停止しています",
+        error: "失敗しました",
       }
       const main = document.querySelector("main")
       const alertBox = document.getElementById("alert")
@@ -279,8 +275,8 @@
         document.getElementById("note").textContent = data.note || ""
         const meta = [data.encoderLabel, data.sourceLabel].filter(Boolean).join(" · ")
         document.getElementById("meta").textContent = meta
-        document.getElementById("tcp-url").textContent = data.tcpUrl || "なし"
-        document.getElementById("udp-url").textContent = data.udpUrl || "なし"
+        document.getElementById("tcp-url").textContent = data.tcpUrl || "まだありません"
+        document.getElementById("udp-url").textContent = data.udpUrl || "まだありません"
         urls = { tcp: data.tcpUrl || "", udp: data.udpUrl || "" }
         showError(data.error || "")
         document.getElementById("apply").textContent = phase === "live" || phase === "starting" ? "設定を反映" : "配信を開始"
@@ -301,7 +297,7 @@
           const response = await fetch("/api/status", { cache: "no-store" })
           render(await response.json())
         } catch (error) {
-          showError("更新できない。" + error.message)
+          showError("画面を更新できません。" + error.message)
         }
       }
 
@@ -339,7 +335,7 @@
           body: JSON.stringify(settings()),
         })
         const body = await response.json().catch(() => ({}))
-        if (!response.ok) showError(body.error || "反映できない")
+        if (!response.ok) showError(body.error || "設定を反映できません")
         await refresh()
       })
       document.getElementById("stop").addEventListener("click", async () => {

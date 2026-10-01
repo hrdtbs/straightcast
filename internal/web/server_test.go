@@ -44,7 +44,7 @@ func TestHealthAndPageContainProduct(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(body)
-	for _, want := range []string{"Straightcast", "rtspt", "1 フレーム"} {
+	for _, want := range []string{"Straightcast", "rtspt", "1フレーム"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("page missing %s", want)
 		}

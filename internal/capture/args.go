@@ -159,18 +159,18 @@ func NVENCAttempts(enc Encoder) []string {
 // Normalize は範囲外の設定を配信できる値に直します。
 func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, error) {
 	if !ValidID(id) {
-		return Options{}, fmt.Errorf("配信 ID は英小文字、数字、ハイフンの 3〜63 文字")
+		return Options{}, fmt.Errorf("配信IDは英小文字、数字、ハイフンで3文字以上63文字以下にしてください")
 	}
 	switch fps {
 	case 15, 24, 30, 60:
 	default:
-		return Options{}, fmt.Errorf("フレームレートは 15、24、30、60")
+		return Options{}, fmt.Errorf("フレームレートは15、24、30、60のいずれかを指定してください")
 	}
 	if bitrate < 800 || bitrate > 12000 {
-		return Options{}, fmt.Errorf("ビットレートは 800〜12000 kbps")
+		return Options{}, fmt.Errorf("ビットレートは800から12000kbpsの範囲にしてください")
 	}
 	if monitor < 0 || monitor > 8 {
-		return Options{}, fmt.Errorf("モニター番号は 0 から 8")
+		return Options{}, fmt.Errorf("モニター番号は0から8にしてください")
 	}
 	enc := Encoder(encoder)
 	switch enc {
@@ -179,7 +179,7 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 			enc = EncoderAuto
 		}
 	default:
-		return Options{}, fmt.Errorf("不明なエンコーダ")
+		return Options{}, fmt.Errorf("不明なエンコーダです")
 	}
 	return Options{
 		Encoder:     enc,
@@ -197,13 +197,13 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 // PublishArgs は ffmpeg の引数。音声なし。
 func PublishArgs(o Options) ([]string, error) {
 	if o.RTSPURL == "" {
-		return nil, fmt.Errorf("RTSP の宛先が空")
+		return nil, fmt.Errorf("RTSPの宛先が空です")
 	}
 	if o.FPS < 1 {
-		return nil, fmt.Errorf("フレームレートが不正")
+		return nil, fmt.Errorf("フレームレートが不正です")
 	}
 	if o.BitrateKbps < 1 {
-		return nil, fmt.Errorf("ビットレートが不正")
+		return nil, fmt.Errorf("ビットレートが不正です")
 	}
 	if o.Threads < 1 {
 		o.Threads = 2
@@ -245,7 +245,7 @@ func PublishArgs(o Options) ([]string, error) {
 			"-i", "pipe:0",
 		)
 	default:
-		return nil, fmt.Errorf("不明な入力")
+		return nil, fmt.Errorf("不明な入力です")
 	}
 
 	args = append(args, "-an")

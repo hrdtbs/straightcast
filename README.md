@@ -1,62 +1,57 @@
 # Straightcast
 
-同じ PC で画面を H.264 にして、ローカルの RTSP に出す。Windows は DXGI（ddagrab）で取って NVENC、Quick Sync、AMF の順に試す。どれも無ければ libx264。Linux と macOS はテスト映像。
+Straightcastは、同じPCの画面をH.264にしてローカルのRTSPへ出せます。WindowsではDXGIのddagrabで画面を取ります。エンコーダはNVENC、Quick Sync、AMFの順です。いずれも無ければlibx264を使います。LinuxとmacOSではテスト映像を出します。
 
-`rtspt://` は TCP、`rtsp://` は UDP。同じ PC で受けるなら TCP。
+受け側のURLは2種類です。`rtspt://`はTCPで、`rtsp://`はUDPです。同じPCで受ける場合はTCPを使ってください。
 
-実行ファイルと MediaMTX だけ。MediaMTX は再エンコードしない。
+配布物は実行ファイルとMediaMTXです。MediaMTXは受信した映像を再エンコードしません。
 
 ## 遅延
 
-640×352 のテストフレームを libx264（スレッド 2）に通し、ローカルの RTSP をデコーダ 1 スレッドで読み戻した中央値。プレイヤーのバッファは入っていない。
+640×352のテストフレームを、スレッド2のlibx264で符号化しました。ローカルのRTSPをデコーダ1スレッドで読み戻した中央値は次のとおりです。プレイヤー側のバッファは含みません。
 
-| fps | 中央値 | ffmpeg の CPU |
+| fps | 中央値 | ffmpegのCPU |
 | --- | --- | --- |
-| 30 | 36ms | 約 5% |
-| 60 | 19ms | 約 9% |
+| 30 | 36ms | 約5% |
+| 60 | 19ms | 約9% |
 
-30fps が標準。60fps は待ちが半分で、エンコーダの仕事は倍。
+標準は30fpsです。60fpsにすると待ち時間は半分になります。そのぶんエンコーダの処理は2倍です。
 
-デコーダがフレームを溜める読み方だと約 70ms。ブラウザから配っていたときの同じ測り方は 71ms。
+デコーダがフレームを溜める読み方では約70msでした。ブラウザから配信していたときの同じ測り方は71msです。
 
-- B フレームなし、lookahead なし。NVENC は preset p1、tune ull、delay 0。
-- VBV は 1 フレーム。
-- キーフレームは約 1 秒（GOP = fps）。長くすると、後から繋いだクライアントが映像を受け取れない。
-- 音声なし。
-- ハードウェアエンコードでは縮小しない。libx264 のときだけ幅 1280、スレッド 2。
-- 配信プロセスの優先度は下げる。
+Bフレームとlookaheadは無効です。NVENCはpreset p1、tune ull、delay 0を使います。VBVバッファは1フレーム分です。キーフレーム間隔は約1秒で、GOPはfpsと一致します。間隔を長くすると、後から接続したクライアントは映像を受け取れません。音声トラックは無しです。ハードウェアエンコードでは縮小しません。libx264のときだけ幅を1280に抑え、スレッド数は2です。配信プロセスの優先度は下げています。
 
 ## ダウンロード
 
-[Releases](https://github.com/hrdtbs/straightcast/releases) にある。Windows は `straightcast_windows_amd64.zip` を展開して `straightcast.exe`。
+バイナリは[Releases](https://github.com/hrdtbs/straightcast/releases)にあります。Windowsでは`straightcast_windows_amd64.zip`を展開し、`straightcast.exe`を起動してください。
 
-ffmpeg は入っていない。[gyan.dev の essentials](https://www.gyan.dev/ffmpeg/builds/) を PATH に通すか、exe の隣の `bin/ffmpeg.exe` に置く。`ddagrab` と `h264_nvenc` が要る。MediaMTX が無ければ初回起動で `bin/` に取る。
+ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の`bin/ffmpeg.exe`に置いてください。`ddagrab`と`h264_nvenc`が必要です。MediaMTXが無い場合、初回起動時に`bin/`へ取得します。
 
 ## 使い方
 
-Go 1.22 以降と ffmpeg。
+ソースから動かすにはGo 1.22以降とffmpegが必要です。
 
 ```sh
 go run ./cmd/straightcast
 ```
 
-初回に MediaMTX v1.21.1 を `bin/` に取る。画面は [http://127.0.0.1:43123](http://127.0.0.1:43123)。
+初回起動でMediaMTX v1.21.1を`bin/`へ取得します。操作画面は[http://127.0.0.1:43123](http://127.0.0.1:43123)です。
 
-`rtspt://127.0.0.1:8554/...` をコピーしたあとはタブを閉じていい。配信は続く。
+画面に出た`rtspt://127.0.0.1:8554/...`をコピーしてください。コピー後にタブを閉じても、配信は続きます。
 
-Linux と macOS はデスクトップを取れないのでテスト映像。別のマシンから見るときはホスト欄を変える。UDP は届かないことがある。
+LinuxとmacOSではデスクトップを取得できません。その場合はテスト映像を送ります。別のマシンから見るときは、ホスト欄を到達できるアドレスへ変えてください。UDPは届かないことがあります。
 
 ## 開発
 
 ```sh
-make test      # go test -race ./cmd/... ./internal/...
-make lint      # golangci-lint run
-make build-all # windows/amd64, linux/amd64, darwin/amd64, darwin/arm64
+make test
+make lint
+make build-all
 ```
 
-lint は [golangci-lint v1.64.8](https://github.com/golangci/golangci-lint)。設定は `.golangci.yml`。
+`make test`は`go test -race ./cmd/... ./internal/...`を実行します。`make lint`は[golangci-lint v1.64.8](https://github.com/golangci/golangci-lint)です。設定ファイルは`.golangci.yml`にあります。`make build-all`の対象はwindows/amd64とlinux/amd64です。darwinはamd64とarm64もコンパイルします。
 
-Actions の定義は `packaging/workflows/`。`.github/workflows/` に置くと、`main` への push でテストと lint、タグ `vX.Y.Z` で Release にバイナリを載せる。手元で同じアーカイブを作るとき:
+GitHub Actionsの定義は`packaging/workflows/`です。`.github/workflows/`へ置くと、`main`へのpushでテストとlintが走ります。タグ`vX.Y.Z`を付けると、Releaseへバイナリを載せます。同じアーカイブを手元で作るには、次のコマンドを実行してください。
 
 ```sh
 scripts/package.sh v0.1.0
@@ -64,7 +59,7 @@ scripts/package.sh v0.1.0
 
 ## 計測
 
-エンコードして RTSP を読み戻すまでの時間。
+次のコマンドは、エンコードしてからRTSPを読み戻すまでの時間を測ります。
 
 ```sh
 go run ./cmd/straightcast measure
@@ -76,10 +71,10 @@ go run ./cmd/straightcast measure
 go build -o straightcast ./cmd/straightcast
 ```
 
-Windows:
+Windows向けは次のコマンドでビルドできます。
 
 ```sh
 GOOS=windows GOARCH=amd64 go build -o straightcast.exe ./cmd/straightcast
 ```
 
-`straightcast.exe` と同じ場所の `bin/` に `ffmpeg.exe` と `mediamtx.exe` を置くか、PATH を通す。MediaMTX が無ければ初回起動で取る。
+`straightcast.exe`と同じ場所の`bin/`に`ffmpeg.exe`と`mediamtx.exe`を置くか、PATHを通してください。MediaMTXが無ければ、初回起動時に取得します。

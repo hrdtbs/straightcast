@@ -113,7 +113,7 @@ func (e *Engine) Halt() {
 	e.snap.Phase = model.PhaseStopped
 	e.snap.OK = true
 	e.snap.Error = ""
-	e.snap.Note = "停止。"
+	e.snap.Note = "停止しています。"
 	e.mu.Unlock()
 }
 
@@ -137,7 +137,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 		UDPURL:      udpURL(host, e.rtspPort, opt.ID),
 		Source:      string(opt.Source),
 		SourceLabel: capture.SourceLabel(opt.Source),
-		Note:        "起動中。",
+		Note:        "起動しています。",
 	}
 	e.mu.Unlock()
 
@@ -152,7 +152,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 		e.mu.Unlock()
 		platform.Kill(mtx)
 		_ = os.RemoveAll(dir)
-		return fmt.Errorf("起動が中断された")
+		return fmt.Errorf("起動が中断されました")
 	}
 	e.mtx = mtx
 	e.dir = dir
@@ -171,7 +171,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 	if e.gen != gen {
 		e.mu.Unlock()
 		platform.Kill(ff)
-		return fmt.Errorf("起動が中断された")
+		return fmt.Errorf("起動が中断されました")
 	}
 	e.ff = ff
 	e.snap.Phase = model.PhaseLive
@@ -250,7 +250,7 @@ func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture
 	preference := string(opt.Encoder)
 	candidates := capture.Candidates(runtime.GOOS, preference, listed)
 	if len(candidates) == 0 {
-		return "", "", nil, nil, fmt.Errorf("H.264 エンコーダが無い。ffmpeg に libx264 か NVENC / QSV / AMF が要る")
+		return "", "", nil, nil, fmt.Errorf("H.264エンコーダがありません。ffmpegにlibx264、またはNVENC、QSV、AMFが必要です")
 	}
 	var last error
 	for _, enc := range candidates {
@@ -280,7 +280,7 @@ func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture
 			go func() { exited <- cmd.Wait() }()
 			select {
 			case err := <-exited:
-				last = fmt.Errorf("%s を起動できない。%v %s", capture.EncoderLabel(enc, preset), err, shorten(e.log.String()))
+				last = fmt.Errorf("%sを起動できません。%v %s", capture.EncoderLabel(enc, preset), err, shorten(e.log.String()))
 				continue
 			case <-ctx.Done():
 				platform.Kill(cmd)
@@ -295,11 +295,11 @@ func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture
 			case <-exited:
 			case <-time.After(2 * time.Second):
 			}
-			last = fmt.Errorf("%s から RTSP に映像が出ない。%s", capture.EncoderLabel(enc, preset), shorten(e.log.String()))
+			last = fmt.Errorf("%sからRTSPへ映像が出ていません。%s", capture.EncoderLabel(enc, preset), shorten(e.log.String()))
 		}
 	}
 	if last == nil {
-		last = fmt.Errorf("エンコーダを開始できない")
+		last = fmt.Errorf("エンコーダを開始できません")
 	}
 	return "", "", nil, nil, last
 }
@@ -330,7 +330,7 @@ func launchMediaMTX(ctx context.Context, mtxPath, bind string, log io.Writer) (*
 	cmd.Stderr = log
 	if err := cmd.Start(); err != nil {
 		_ = os.RemoveAll(dir)
-		return nil, "", nil, fmt.Errorf("MediaMTX を起動できない: %w", err)
+		return nil, "", nil, fmt.Errorf("MediaMTXを起動できません: %w", err)
 	}
 	platform.Deprioritize(cmd)
 	waited := make(chan error, 1)
@@ -356,9 +356,9 @@ func launchMediaMTX(ctx context.Context, mtxPath, bind string, log io.Writer) (*
 	case err := <-waited:
 		_ = os.RemoveAll(dir)
 		if err == nil {
-			err = fmt.Errorf("すぐ終了した")
+			err = fmt.Errorf("すぐに終了しました")
 		}
-		return nil, "", nil, fmt.Errorf("MediaMTX が終了した。%v", err)
+		return nil, "", nil, fmt.Errorf("MediaMTXが終了しました。%v", err)
 	case <-timer.C:
 		platform.Kill(cmd)
 		select {
@@ -366,7 +366,7 @@ func launchMediaMTX(ctx context.Context, mtxPath, bind string, log io.Writer) (*
 		case <-time.After(2 * time.Second):
 		}
 		_ = os.RemoveAll(dir)
-		return nil, "", nil, fmt.Errorf("RTSP が開く前にタイムアウト")
+		return nil, "", nil, fmt.Errorf("RTSPを開く前にタイムアウトしました")
 	case <-ctx.Done():
 		platform.Kill(cmd)
 		select {
@@ -448,11 +448,11 @@ func portOf(bind string) (int, error) {
 	}
 	_, portText, err := net.SplitHostPort(bind)
 	if err != nil {
-		return 0, fmt.Errorf("RTSP の待受アドレスが不正: %s", bind)
+		return 0, fmt.Errorf("RTSPの待受アドレスが不正です: %s", bind)
 	}
 	port, err := strconv.Atoi(portText)
 	if err != nil || port < 1 || port > 65535 {
-		return 0, fmt.Errorf("RTSP のポートが不正")
+		return 0, fmt.Errorf("RTSPのポートが不正です")
 	}
 	return port, nil
 }
@@ -463,19 +463,19 @@ func cleanHost(host string) (string, error) {
 		return "127.0.0.1", nil
 	}
 	if len(host) > 253 || strings.ContainsAny(host, " /\t\r\n") || strings.Contains(host, "://") {
-		return "", fmt.Errorf("ホスト名が不正")
+		return "", fmt.Errorf("ホスト名が不正です")
 	}
 	return host, nil
 }
 
 func liveNote(source capture.SourceKind, hardware bool) string {
 	if source != capture.SourceDesktop {
-		return "この OS はデスクトップを取れない。テスト映像。画面の取り込みは Windows の ddagrab。"
+		return "このOSではデスクトップを取得できません。テスト映像を送っています。画面の取り込みはWindowsのddagrabです。"
 	}
 	if !hardware {
-		return "libx264。スレッド 2、幅は 1280 まで。"
+		return "libx264です。スレッド数は2で、幅は1280までに縮小します。"
 	}
-	return "GPU エンコーダ。タブを閉じても配信は続く。"
+	return "GPUのエンコーダを使っています。タブを閉じても配信は続きます。"
 }
 
 func shorten(text string) string {

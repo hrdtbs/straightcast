@@ -88,7 +88,7 @@ func serve() error {
 			Monitor:     *monitor,
 			Window:      *window,
 			Encoder:     *encoder,
-			Host:        "127.0.0.1",
+			Host:        relay.SuggestedHost(),
 		}
 		go func() {
 			if err := engine.Apply(settings); err != nil {

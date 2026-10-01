@@ -205,13 +205,13 @@
           <h2>rtspt</h2>
           <p class="url" id="tcp-url">準備中</p>
           <button type="button" class="ghost" id="copy-tcp">コピー</button>
-          <p class="hint">TCPです。同じPCで受けるならこちらを使ってください。</p>
+          <p class="hint">TCPです。他のPCへ渡すときはこちらを使ってください。</p>
         </li>
         <li>
           <h2>rtsp</h2>
           <p class="url" id="udp-url">準備中</p>
           <button type="button" class="ghost" id="copy-udp">コピー</button>
-          <p class="hint">UDPです。届かないことがあります。</p>
+          <p class="hint">UDPです。他のPCでは届かないことがあります。</p>
         </li>
       </ul>
 
@@ -221,7 +221,7 @@
             <input id="stream-id" name="id" autocomplete="off" spellcheck="false" required pattern="[a-z0-9][a-z0-9-]{2,62}" />
           </label>
           <label>ホスト
-            <input id="host" name="host" autocomplete="off" spellcheck="false" value="127.0.0.1" />
+            <input id="host" name="host" autocomplete="off" spellcheck="false" placeholder="このPCのアドレス" />
           </label>
           <label>フレームレート
             <select id="fps" name="fps">
@@ -331,7 +331,7 @@
         document.getElementById("stop").disabled = phase === "stopped" || phase === "starting"
         if (!formReady && data.id) {
           document.getElementById("stream-id").value = data.id
-          document.getElementById("host").value = data.host || "127.0.0.1"
+          document.getElementById("host").value = data.host || ""
           document.getElementById("fps").value = String(data.fps || 30)
           document.getElementById("bitrate").value = String(data.bitrateKbps || 2500)
           document.getElementById("monitor").value = String(data.monitor || 0)

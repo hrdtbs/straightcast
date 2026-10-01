@@ -55,7 +55,7 @@ func New(ffmpegPath, mtxPath, rtspBind string) (*Engine, error) {
 			OK:       true,
 			Phase:    model.PhaseStopped,
 			RTSPPort: port,
-			Host:     "127.0.0.1",
+			Host:     SuggestedHost(),
 			Encoder:  "auto",
 		},
 	}, nil
@@ -160,6 +160,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 	e.dir = dir
 	e.mu.Unlock()
 
+	platform.AllowInbound(e.mtxPath)
 	used, preset, ff, wait, err := e.launchFFmpeg(ctx, opt)
 	if err != nil {
 		e.stopLocked()
@@ -471,7 +472,7 @@ func portOf(bind string) (int, error) {
 func cleanHost(host string) (string, error) {
 	host = strings.TrimSpace(host)
 	if host == "" {
-		return "127.0.0.1", nil
+		return SuggestedHost(), nil
 	}
 	if len(host) > 253 || strings.ContainsAny(host, " /\t\r\n") || strings.Contains(host, "://") {
 		return "", fmt.Errorf("ホスト名が不正です")

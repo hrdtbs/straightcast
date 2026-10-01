@@ -123,7 +123,10 @@
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 14px;
+        margin: 4px 0 16px;
+      }
+      #apply {
+        min-width: 9rem;
       }
       button {
         min-height: 44px;
@@ -168,6 +171,11 @@
         </div>
       </section>
       <p class="alert" id="alert" role="alert" hidden></p>
+
+      <div class="actions">
+        <button type="submit" form="form" id="apply">配信を開始</button>
+        <button type="button" class="ghost" id="stop">停止</button>
+      </div>
 
       <div class="urls">
         <article>
@@ -217,10 +225,6 @@
           </label>
         </div>
         <p class="hint">待ち時間は1フレーム程度です。30fpsでは約33ms、60fpsでは約17msになります。60fpsではエンコードの処理が2倍です。</p>
-        <div class="actions">
-          <button type="submit" id="apply">配信を開始</button>
-          <button type="button" class="ghost" id="stop">停止</button>
-        </div>
       </form>
 
       <section class="why">

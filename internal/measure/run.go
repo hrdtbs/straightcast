@@ -1,4 +1,4 @@
-// Package measure は RTSP を読み戻すまでの遅延を測る。
+// Package measure は RTSP を読み戻すまでの遅延を測ります。
 package measure
 
 import (

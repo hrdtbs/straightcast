@@ -1,4 +1,4 @@
-// Package web は制御画面。
+// Package web は制御画面です。
 package web
 
 import (

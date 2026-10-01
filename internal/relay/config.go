@@ -2,9 +2,9 @@ package relay
 
 import "fmt"
 
-// MediaMTXConfig は RTSP 以外を閉じた設定を返す。
+// MediaMTXConfig は RTSP 以外を閉じた設定を返します。
 func MediaMTXConfig(rtspAddress string) string {
-	return fmt.Sprintf(`# Straightcast。再エンコードしない。
+	return fmt.Sprintf(`# Straightcast。再エンコードしません。
 logLevel: info
 logDestinations: [stdout]
 

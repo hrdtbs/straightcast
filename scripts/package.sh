@@ -1,5 +1,5 @@
 #!/bin/sh
-# dist/ にアーカイブを出す。
+# dist/ にアーカイブを出します。
 # 使い方: scripts/package.sh v0.1.0
 set -eu
 

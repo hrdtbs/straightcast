@@ -1,4 +1,4 @@
-// Package capture は ffmpeg の引数を作る。
+// Package capture は ffmpeg の引数を作ります。
 package capture
 
 import (
@@ -12,15 +12,15 @@ import (
 type Encoder string
 
 const (
-	// EncoderAuto は NVENC、QSV、AMF、libx264 の順。
+	// EncoderAuto は NVENC、QSV、AMF、libx264 の順です。
 	EncoderAuto Encoder = "auto"
-	// EncoderNVENC は NVIDIA。
+	// EncoderNVENC は NVIDIA です。
 	EncoderNVENC Encoder = "nvenc"
-	// EncoderQSV は Intel Quick Sync。
+	// EncoderQSV は Intel Quick Sync です。
 	EncoderQSV Encoder = "qsv"
-	// EncoderAMF は AMD。
+	// EncoderAMF は AMD です。
 	EncoderAMF Encoder = "amf"
-	// EncoderX264 は libx264。
+	// EncoderX264 は libx264 です。
 	EncoderX264 Encoder = "libx264"
 )
 
@@ -28,18 +28,18 @@ const (
 type SourceKind string
 
 const (
-	// SourceDesktop は Windows の ddagrab。
+	// SourceDesktop は Windows の ddagrab です。
 	SourceDesktop SourceKind = "desktop"
-	// SourceTest はテスト映像。
+	// SourceTest はテスト映像です。
 	SourceTest SourceKind = "test"
-	// SourceRaw は計測用の raw 入力。
+	// SourceRaw は計測用の raw 入力です。
 	SourceRaw SourceKind = "raw"
 )
 
 // Options は1本の配信コマンドです。
 type Options struct {
 	Encoder     Encoder
-	NVENCPreset string // p1 または llhp。空なら p1。
+	NVENCPreset string // p1 または llhp です。空なら p1 です。
 	Source      SourceKind
 	ID          string
 	FPS         int
@@ -59,7 +59,7 @@ func ValidID(id string) bool {
 }
 
 // DefaultSource は OS で使える一番軽い取り込みです。
-// Windows では DXGI Desktop Duplication。それ以外はテスト映像です。
+// Windows では DXGI Desktop Duplication を使います。それ以外はテスト映像です。
 func DefaultSource(goos string) SourceKind {
 	if goos == "windows" {
 		return SourceDesktop
@@ -67,7 +67,7 @@ func DefaultSource(goos string) SourceKind {
 	return SourceTest
 }
 
-// Hardware は NVENC / QSV / AMF なら true。
+// Hardware は NVENC、QSV、AMF なら true です。
 func Hardware(enc Encoder) bool {
 	switch enc {
 	case EncoderNVENC, EncoderQSV, EncoderAMF:
@@ -108,7 +108,7 @@ func SourceLabel(kind SourceKind) string {
 	}
 }
 
-// VBVBits は 1 フレーム分の VBV。大きいとエンコーダが溜める。
+// VBVBits は 1 フレーム分の VBV です。大きいとエンコーダが溜めます。
 func VBVBits(kbps, fps int) int {
 	if fps < 1 {
 		fps = 30
@@ -123,7 +123,7 @@ func VBVBits(kbps, fps int) int {
 	return bits
 }
 
-// Candidates は試す順。Linux では auto のとき NVENC を試さない。明示したエンコーダだけ返す。
+// Candidates は試す順です。Linux の auto では NVENC を試しません。明示したエンコーダだけ返します。
 func Candidates(goos, preference string, listed map[Encoder]bool) []Encoder {
 	pref := Encoder(preference)
 	if pref != "" && pref != EncoderAuto {
@@ -148,7 +148,7 @@ func Candidates(goos, preference string, listed map[Encoder]bool) []Encoder {
 	return nil
 }
 
-// NVENCAttempts は p1 のあと llhp。
+// NVENCAttempts は p1 のあと llhp です。
 func NVENCAttempts(enc Encoder) []string {
 	if enc != EncoderNVENC {
 		return []string{""}
@@ -194,7 +194,7 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 	}, nil
 }
 
-// PublishArgs は ffmpeg の引数。音声なし。
+// PublishArgs は ffmpeg の引数です。音声は付けません。
 func PublishArgs(o Options) ([]string, error) {
 	if o.RTSPURL == "" {
 		return nil, fmt.Errorf("RTSPの宛先が空です")
@@ -226,11 +226,11 @@ func PublishArgs(o Options) ([]string, error) {
 		"-analyzeduration", "0",
 	}
 
-	// 壁時計をタイムスタンプにする。フレーム番号だと mux が次の時刻まで抱える。
+	// 壁時計をタイムスタンプにします。フレーム番号だと mux が次の時刻まで抱えます。
 	args = append(args, "-use_wallclock_as_timestamps", "1")
 	switch o.Source {
 	case SourceDesktop:
-		// ddagrab。gdigrab は使わない。
+		// ddagrab を使います。gdigrab は使いません。
 		spec := fmt.Sprintf("ddagrab=output_idx=%d:framerate=%d:draw_mouse=1", o.Monitor, o.FPS)
 		args = append(args, "-f", "lavfi", "-i", spec)
 	case SourceTest:
@@ -328,7 +328,7 @@ func encoderArgs(o Options) []string {
 	default:
 		args := []string{}
 		if o.Source == SourceDesktop {
-			// libx264 のときだけ CPU に下ろして、幅を 1280 までにする。
+			// libx264 のときだけ CPU に下ろし、幅を 1280 までにします。
 			args = append(args, "-vf", "hwdownload,format=bgra,scale='min(1280,iw)':-2:flags=fast_bilinear")
 		}
 		args = append(args,

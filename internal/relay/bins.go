@@ -1,4 +1,4 @@
-// Package relay は MediaMTX と ffmpeg を起動する。
+// Package relay は MediaMTX と ffmpeg を起動します。
 package relay
 
 import (

@@ -20,7 +20,7 @@ import (
 	"straightcast/internal/platform"
 )
 
-// Engine は MediaMTX と ffmpeg を動かす。
+// Engine は MediaMTX と ffmpeg を動かします。
 type Engine struct {
 	mu sync.Mutex
 	op sync.Mutex

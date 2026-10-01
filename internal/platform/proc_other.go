@@ -17,7 +17,7 @@ func Setup(cmd *exec.Cmd) {
 	}
 }
 
-// Deprioritize は nice 10。
+// Deprioritize は nice 10 にします。
 func Deprioritize(cmd *exec.Cmd) {
 	if cmd == nil || cmd.Process == nil {
 		return

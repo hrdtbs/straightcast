@@ -14,7 +14,7 @@ func Setup(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 }
 
-// Deprioritize は nice 10。
+// Deprioritize は nice 10 にします。
 func Deprioritize(cmd *exec.Cmd) {
 	if cmd == nil || cmd.Process == nil {
 		return

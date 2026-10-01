@@ -1,7 +1,7 @@
-// Package model は制御画面と中継が共有する状態。
+// Package model は制御画面と中継が共有する状態です。
 package model
 
-// 配信の段階。
+// 配信の段階です。
 const (
 	PhaseStarting = "starting"
 	PhaseLive     = "live"

@@ -90,7 +90,7 @@ func serve() error {
 		}
 		go func() {
 			if err := engine.Apply(settings); err != nil {
-				log.Printf("配信を開始できませんでした: %v", err)
+				log.Printf("配信を開始できない: %v", err)
 			} else {
 				snap := engine.Snapshot()
 				log.Printf("配信中 %s", snap.TCPURL)
@@ -137,7 +137,7 @@ func findTools() (string, string, error) {
 		}
 	}
 	if ffmpegPath == "" {
-		return "", "", fmt.Errorf("ffmpeg が見つかりません。Windows では https://www.gyan.dev/ffmpeg/builds/ の essentials を PATH に通すか、bin に置いてください")
+		return "", "", fmt.Errorf("ffmpeg が無い。Windows は https://www.gyan.dev/ffmpeg/builds/ の essentials を PATH か bin に置く")
 	}
 	if path := existingBinary(dirs, mediaMTXNames()); path != "" {
 		return ffmpegPath, path, nil

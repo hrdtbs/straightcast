@@ -1,4 +1,4 @@
-// Package clock は映像の上端に時刻を描き、デコード後に読み戻します。
+// Package clock はフレーム上端に時刻を描いて、デコード後に読む。
 package clock
 
 // Bits はミリ秒の UNIX 時刻を載せる幅です。

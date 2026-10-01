@@ -2,11 +2,9 @@ package relay
 
 import "fmt"
 
-// MediaMTXConfig は RTSP だけを開く設定です。
-// WebRTC、RTMP、HLS、SRT、MoQ はポートも変換も要らないので閉じます。
-// rtspt は TCP、rtsp は UDP です。UDP を開けても TCP 側の遅延は増えません。
+// MediaMTXConfig は RTSP 以外を閉じた設定を返す。
 func MediaMTXConfig(rtspAddress string) string {
-	return fmt.Sprintf(`# Straightcast。再エンコードせず、TCP の RTSP だけを配る。
+	return fmt.Sprintf(`# Straightcast。再エンコードしない。
 logLevel: info
 logDestinations: [stdout]
 

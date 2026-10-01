@@ -1,4 +1,4 @@
-// Package capture は ffmpeg の取り込みと低遅延エンコードの引数を組み立てます。
+// Package capture は ffmpeg の引数を作る。
 package capture
 
 import (
@@ -12,15 +12,15 @@ import (
 type Encoder string
 
 const (
-	// EncoderAuto は使えるハードウェアを順に試し、無ければ libx264 です。
+	// EncoderAuto は NVENC、QSV、AMF、libx264 の順。
 	EncoderAuto Encoder = "auto"
-	// EncoderNVENC は NVIDIA の固定機能エンコーダです。
+	// EncoderNVENC は NVIDIA。
 	EncoderNVENC Encoder = "nvenc"
-	// EncoderQSV は Intel Quick Sync です。
+	// EncoderQSV は Intel Quick Sync。
 	EncoderQSV Encoder = "qsv"
-	// EncoderAMF は AMD の固定機能エンコーダです。
+	// EncoderAMF は AMD。
 	EncoderAMF Encoder = "amf"
-	// EncoderX264 はソフトウェアエンコードです。
+	// EncoderX264 は libx264。
 	EncoderX264 Encoder = "libx264"
 )
 
@@ -28,11 +28,11 @@ const (
 type SourceKind string
 
 const (
-	// SourceDesktop は Windows の DXGI Desktop Duplication です。
+	// SourceDesktop は Windows の ddagrab。
 	SourceDesktop SourceKind = "desktop"
-	// SourceTest はデスクトップを取れない環境のテスト映像です。
+	// SourceTest はテスト映像。
 	SourceTest SourceKind = "test"
-	// SourceRaw は計測用に標準入力から受け取る映像です。
+	// SourceRaw は計測用の raw 入力。
 	SourceRaw SourceKind = "raw"
 )
 
@@ -67,7 +67,7 @@ func DefaultSource(goos string) SourceKind {
 	return SourceTest
 }
 
-// Hardware は専用のエンコード回路を使う実装です。
+// Hardware は NVENC / QSV / AMF なら true。
 func Hardware(enc Encoder) bool {
 	switch enc {
 	case EncoderNVENC, EncoderQSV, EncoderAMF:
@@ -82,15 +82,15 @@ func EncoderLabel(enc Encoder, preset string) string {
 	switch enc {
 	case EncoderNVENC:
 		if preset == "llhp" {
-			return "NVIDIA NVENC（低遅延・旧プリセット）"
+			return "NVIDIA NVENC（llhp）"
 		}
-		return "NVIDIA NVENC（超低遅延）"
+		return "NVIDIA NVENC"
 	case EncoderQSV:
 		return "Intel Quick Sync"
 	case EncoderAMF:
-		return "AMD AMF（超低遅延）"
+		return "AMD AMF"
 	case EncoderX264:
-		return "ソフトウェア（libx264・スレッド 2）"
+		return "libx264、スレッド 2"
 	default:
 		return string(enc)
 	}
@@ -100,7 +100,7 @@ func EncoderLabel(enc Encoder, preset string) string {
 func SourceLabel(kind SourceKind) string {
 	switch kind {
 	case SourceDesktop:
-		return "この PC のデスクトップ（DXGI）"
+		return "デスクトップ（DXGI）"
 	case SourceRaw:
 		return "計測用の映像"
 	default:
@@ -108,8 +108,7 @@ func SourceLabel(kind SourceKind) string {
 	}
 }
 
-// VBVBits は1フレーム分の VBV バッファです。
-// これより大きいと、エンコーダが先のフレームを溜めてから出します。
+// VBVBits は 1 フレーム分の VBV。大きいとエンコーダが溜める。
 func VBVBits(kbps, fps int) int {
 	if fps < 1 {
 		fps = 30
@@ -124,9 +123,7 @@ func VBVBits(kbps, fps int) int {
 	return bits
 }
 
-// Candidates は試す順のエンコーダです。
-// Linux では一覧に NVENC があっても使いません。ドライバが無いことが多いのと、
-// デスクトップ取り込みが Windows 限定なためです。明示指定のときはその1つだけです。
+// Candidates は試す順。Linux では auto のとき NVENC を試さない。明示したエンコーダだけ返す。
 func Candidates(goos, preference string, listed map[Encoder]bool) []Encoder {
 	pref := Encoder(preference)
 	if pref != "" && pref != EncoderAuto {
@@ -151,7 +148,7 @@ func Candidates(goos, preference string, listed map[Encoder]bool) []Encoder {
 	return nil
 }
 
-// NVENCAttempts は新しいプリセットが無い ffmpeg 向けに、失敗したら旧プリセットを試します。
+// NVENCAttempts は p1 のあと llhp。
 func NVENCAttempts(enc Encoder) []string {
 	if enc != EncoderNVENC {
 		return []string{""}
@@ -162,18 +159,18 @@ func NVENCAttempts(enc Encoder) []string {
 // Normalize は範囲外の設定を配信できる値に直します。
 func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, error) {
 	if !ValidID(id) {
-		return Options{}, fmt.Errorf("配信 ID は英小文字・数字・ハイフンで 3〜63 文字にしてください")
+		return Options{}, fmt.Errorf("配信 ID は英小文字、数字、ハイフンの 3〜63 文字")
 	}
 	switch fps {
 	case 15, 24, 30, 60:
 	default:
-		return Options{}, fmt.Errorf("フレームレートは 15、24、30、60 のどれかにしてください")
+		return Options{}, fmt.Errorf("フレームレートは 15、24、30、60")
 	}
 	if bitrate < 800 || bitrate > 12000 {
-		return Options{}, fmt.Errorf("ビットレートは 800〜12000 kbps にしてください")
+		return Options{}, fmt.Errorf("ビットレートは 800〜12000 kbps")
 	}
 	if monitor < 0 || monitor > 8 {
-		return Options{}, fmt.Errorf("モニター番号は 0 から 8 にしてください")
+		return Options{}, fmt.Errorf("モニター番号は 0 から 8")
 	}
 	enc := Encoder(encoder)
 	switch enc {
@@ -182,7 +179,7 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 			enc = EncoderAuto
 		}
 	default:
-		return Options{}, fmt.Errorf("不明なエンコーダです")
+		return Options{}, fmt.Errorf("不明なエンコーダ")
 	}
 	return Options{
 		Encoder:     enc,
@@ -197,16 +194,16 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 	}, nil
 }
 
-// PublishArgs は ffmpeg に渡す引数です。音声は付けません。
+// PublishArgs は ffmpeg の引数。音声なし。
 func PublishArgs(o Options) ([]string, error) {
 	if o.RTSPURL == "" {
-		return nil, fmt.Errorf("RTSP の宛先が空です")
+		return nil, fmt.Errorf("RTSP の宛先が空")
 	}
 	if o.FPS < 1 {
-		return nil, fmt.Errorf("フレームレートが不正です")
+		return nil, fmt.Errorf("フレームレートが不正")
 	}
 	if o.BitrateKbps < 1 {
-		return nil, fmt.Errorf("ビットレートが不正です")
+		return nil, fmt.Errorf("ビットレートが不正")
 	}
 	if o.Threads < 1 {
 		o.Threads = 2
@@ -229,12 +226,11 @@ func PublishArgs(o Options) ([]string, error) {
 		"-analyzeduration", "0",
 	}
 
-	// 入力のタイムスタンプを「届いた時刻」にする。
-	// フレーム番号で刻むと、マクスが次の時刻までフレームを抱える。
+	// 壁時計をタイムスタンプにする。フレーム番号だと mux が次の時刻まで抱える。
 	args = append(args, "-use_wallclock_as_timestamps", "1")
 	switch o.Source {
 	case SourceDesktop:
-		// gdigrab は CPU で画面をコピーする。ddagrab は DXGI のフレームをそのまま渡す。
+		// ddagrab。gdigrab は使わない。
 		spec := fmt.Sprintf("ddagrab=output_idx=%d:framerate=%d:draw_mouse=1", o.Monitor, o.FPS)
 		args = append(args, "-f", "lavfi", "-i", spec)
 	case SourceTest:
@@ -249,7 +245,7 @@ func PublishArgs(o Options) ([]string, error) {
 			"-i", "pipe:0",
 		)
 	default:
-		return nil, fmt.Errorf("不明な入力です")
+		return nil, fmt.Errorf("不明な入力")
 	}
 
 	args = append(args, "-an")
@@ -332,8 +328,7 @@ func encoderArgs(o Options) []string {
 	default:
 		args := []string{}
 		if o.Source == SourceDesktop {
-			// D3D11 のフレームをソフトウェアエンコーダへ渡すときだけ、CPU 側へ下ろす。
-			// 幅は 1280 までに抑え、CPU を取りすぎないようにする。
+			// libx264 のときだけ CPU に下ろして、幅を 1280 までにする。
 			args = append(args, "-vf", "hwdownload,format=bgra,scale='min(1280,iw)':-2:flags=fast_bilinear")
 		}
 		args = append(args,

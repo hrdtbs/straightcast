@@ -153,10 +153,10 @@
   </head>
   <body>
     <main data-phase="starting">
-      <p class="eyebrow">Same PC · RTSP</p>
+      <p class="eyebrow">local rtsp</p>
       <h1>Straightcast</h1>
       <p class="lead">
-        同じ PC の中で、画面を RTSP にします。ブラウザのエンコーダも、ネットの往復も通りません。Windows では GPU のエンコード回路を使うので、CPU をほとんど取りません。
+        画面を H.264 にして、この PC の RTSP に出す。Windows は GPU のエンコーダを使う。
       </p>
 
       <section class="tally" role="status" aria-live="polite">
@@ -164,7 +164,7 @@
         <div>
           <p class="phase" id="phase">起動しています</p>
           <p class="meta" id="meta"></p>
-          <p class="sub" id="note">中継プロセスを起こしています。</p>
+          <p class="sub" id="note">起動中。</p>
         </div>
       </section>
       <p class="alert" id="alert" role="alert" hidden></p>
@@ -174,13 +174,13 @@
           <h2>TCP（rtspt）</h2>
           <p class="url" id="tcp-url">準備中</p>
           <button type="button" id="copy-tcp">URL をコピー</button>
-          <p class="hint">rtspt は TCP です。ジッタが小さく、短い経路です。URL をコピーしたあとは、このタブを閉じて構いません。</p>
+          <p class="hint">TCP。コピーしたあとはタブを閉じていい。</p>
         </article>
         <article>
           <h2>UDP（rtsp）</h2>
           <p class="url" id="udp-url">準備中</p>
           <button type="button" id="copy-udp">URL をコピー</button>
-          <p class="hint">rtsp は UDP です。同じ LAN でも届かないことがあり、届いても受信側の揺れ吸収の分だけ TCP より遅れます。</p>
+          <p class="hint">UDP。届かないことがある。届いても TCP より遅れやすい。</p>
         </article>
       </div>
 
@@ -196,7 +196,7 @@
             <select id="fps" name="fps">
               <option value="15">15</option>
               <option value="24">24</option>
-              <option value="30" selected>30（推奨）</option>
+              <option value="30" selected>30</option>
               <option value="60">60</option>
             </select>
           </label>
@@ -208,15 +208,15 @@
           </label>
           <label>エンコーダ
             <select id="encoder" name="encoder">
-              <option value="auto" selected>自動（ハードウェア優先）</option>
+              <option value="auto" selected>自動</option>
               <option value="nvenc">NVIDIA NVENC</option>
               <option value="qsv">Intel Quick Sync</option>
               <option value="amf">AMD AMF</option>
-              <option value="libx264">ソフトウェア（軽いスレッド数）</option>
+              <option value="libx264">libx264</option>
             </select>
           </label>
         </div>
-        <p class="hint">エンコードの待ちは、だいたい 1 フレーム分です。30fps なら約 33ms、60fps なら約 17ms。60 は仕事が倍になるので、負荷を抑えたいときは 30 のままにしてください。</p>
+        <p class="hint">待ちは 1 フレームくらい。30fps で約 33ms、60fps で約 17ms。60 はエンコードが倍。</p>
         <div class="actions">
           <button type="submit" id="apply">配信を開始</button>
           <button type="button" class="ghost" id="stop">停止</button>
@@ -224,26 +224,23 @@
       </form>
 
       <section class="why">
-        <h2>遅延をどこまで詰めているか</h2>
+        <h2>エンコード</h2>
         <ul>
-          <li>Windows では DXGI のフレームを、縮小も CPU へのコピーもせず、NVENC・Quick Sync・AMF のどれかへ渡します。</li>
-          <li>B フレームなし、先読みなし、エンコーダの出力待ちなし。レート制御のバッファは 1 フレーム分です。</li>
-          <li>キーフレームは約 1 秒ごとです。これより長くすると、あとから接続した受信側が映像を受け取れません。</li>
-          <li>音声は付けません。変換が遅延を足し、受信側が溜める量も増えるためです。</li>
-          <li>映像はこの PC の中だけを通ります。ブラウザの WebRTC も、クラウドの往復もありません。</li>
+          <li>Windows は ddagrab。縮小せず NVENC、Quick Sync、AMF の順。無ければ libx264。</li>
+          <li>B フレームなし、lookahead なし。VBV は 1 フレーム。</li>
+          <li>キーフレームは約 1 秒。長くすると、後から繋いだ側が映像を受け取れない。</li>
+          <li>音声なし。</li>
+          <li>中継はこの PC の中だけ。プレビューは出さない。</li>
         </ul>
-        <p>
-          ここより先の再生バッファは、この配信側の測定に含まれません。
-        </p>
       </section>
-      <p class="foot">Straightcast は配信中もこの画面をデコードしません。確認用のプレビューは、負荷になるので置いていません。</p>
+      <p class="foot">この画面は映像をデコードしない。</p>
     </main>
     <script>
       const phaseText = {
         starting: "起動しています",
         live: "配信中",
         stopped: "止まっています",
-        error: "配信できていません",
+        error: "エラー",
       }
       const main = document.querySelector("main")
       const alertBox = document.getElementById("alert")
@@ -282,8 +279,8 @@
         document.getElementById("note").textContent = data.note || ""
         const meta = [data.encoderLabel, data.sourceLabel].filter(Boolean).join(" · ")
         document.getElementById("meta").textContent = meta
-        document.getElementById("tcp-url").textContent = data.tcpUrl || "まだありません"
-        document.getElementById("udp-url").textContent = data.udpUrl || "まだありません"
+        document.getElementById("tcp-url").textContent = data.tcpUrl || "なし"
+        document.getElementById("udp-url").textContent = data.udpUrl || "なし"
         urls = { tcp: data.tcpUrl || "", udp: data.udpUrl || "" }
         showError(data.error || "")
         document.getElementById("apply").textContent = phase === "live" || phase === "starting" ? "設定を反映" : "配信を開始"
@@ -304,7 +301,7 @@
           const response = await fetch("/api/status", { cache: "no-store" })
           render(await response.json())
         } catch (error) {
-          showError("画面を更新できません。" + error.message)
+          showError("更新できない。" + error.message)
         }
       }
 
@@ -342,7 +339,7 @@
           body: JSON.stringify(settings()),
         })
         const body = await response.json().catch(() => ({}))
-        if (!response.ok) showError(body.error || "設定を反映できませんでした")
+        if (!response.ok) showError(body.error || "反映できない")
         await refresh()
       })
       document.getElementById("stop").addEventListener("click", async () => {

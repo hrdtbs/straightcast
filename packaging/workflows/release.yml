@@ -76,10 +76,10 @@ jobs:
         with:
           files: artifacts/*
           body: |
-            同じ PC の中で画面を RTSP にします。ブラウザのエンコーダも、ネットの往復も通りません。
+            画面を H.264 にして、同じ PC の RTSP に出す。
 
-            Windows では `straightcast_windows_amd64.zip` を展開し、`straightcast.exe` を起動してください。ffmpeg は入っていません。[gyan.dev の essentials](https://www.gyan.dev/ffmpeg/builds/) を PATH に通すか、exe の隣の `bin/ffmpeg.exe` に置いてください。`ddagrab` と `h264_nvenc` が入っているビルドが必要です。
+            Windows は `straightcast_windows_amd64.zip` を展開して `straightcast.exe`。ffmpeg は入っていない。[gyan.dev の essentials](https://www.gyan.dev/ffmpeg/builds/) を PATH に通すか、exe の隣の `bin/ffmpeg.exe` に置く。`ddagrab` と `h264_nvenc` が要る。
 
-            MediaMTX が無いときは、初回起動で公式リリースを `bin/` に取得します。
+            MediaMTX が無ければ初回起動で `bin/` に取る。
 
-            制御画面は http://127.0.0.1:43123 です。表示された `rtspt://`（TCP）が短い経路です。
+            画面は http://127.0.0.1:43123 。`rtspt://` が TCP。

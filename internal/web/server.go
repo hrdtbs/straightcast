@@ -1,4 +1,4 @@
-// Package web は配信の開始と URL のコピーだけを行う画面です。
+// Package web は制御画面。
 package web
 
 import (
@@ -27,7 +27,7 @@ func Handler(ctrl Controller) http.Handler {
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
 		page, err := files.ReadFile("page.html")
 		if err != nil {
-			http.Error(w, "画面を読めません", http.StatusInternalServerError)
+			http.Error(w, "画面が読めない", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -43,12 +43,12 @@ func Handler(ctrl Controller) http.Handler {
 	mux.HandleFunc("POST /api/start", func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "リクエストを読めませんでした"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "リクエストが読めない"})
 			return
 		}
 		var settings model.Settings
 		if err := json.Unmarshal(body, &settings); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "設定の形式が不正です"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "設定の形式が不正"})
 			return
 		}
 		if err := ctrl.Apply(settings); err != nil {

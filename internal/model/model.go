@@ -1,4 +1,4 @@
-// Package model は画面と中継が共有する状態です。
+// Package model は制御画面と中継が共有する状態。
 package model
 
 // 配信の段階。

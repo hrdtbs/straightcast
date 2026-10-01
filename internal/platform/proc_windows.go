@@ -56,7 +56,7 @@ var (
 	job       syscall.Handle
 )
 
-// Setup はコンソールを出さず、他のプロセスより低い優先度で起動します。
+// Setup はコンソールを出さず、優先度を下げる。
 func Setup(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		HideWindow:    true,

@@ -1,5 +1,4 @@
-// Package measure はエンコードしてから RTSP を読み戻すまでの遅延を測ります。
-// 再生側のバッファは含みません。
+// Package measure は RTSP を読み戻すまでの遅延を測る。
 package measure
 
 import (
@@ -106,7 +105,7 @@ func Run(ffmpegPath, mtxPath string, frames, fps, bitrate, port int) (Result, er
 	go writeClock(writeCtx, stdin, fps)
 
 	if !waitProbe(ctx, ffmpegPath, url) {
-		return Result{}, fmt.Errorf("RTSP に映像が出ませんでした。%s", shorten(log.String()))
+		return Result{}, fmt.Errorf("RTSP に映像が出ない。%s", shorten(log.String()))
 	}
 
 	probedW, probedH, err := probeSize(ctx, ffmpegPath, url)
@@ -114,7 +113,7 @@ func Run(ffmpegPath, mtxPath string, frames, fps, bitrate, port int) (Result, er
 		return Result{}, err
 	}
 	if probedW != width || probedH != height {
-		return Result{}, fmt.Errorf("映像サイズが %dx%d でした。時計は %dx%d です", probedW, probedH, width, height)
+		return Result{}, fmt.Errorf("映像サイズは %dx%d。時計は %dx%d", probedW, probedH, width, height)
 	}
 
 	samples, err := readSamples(ctx, ffmpegPath, url, frames)
@@ -122,7 +121,7 @@ func Run(ffmpegPath, mtxPath string, frames, fps, bitrate, port int) (Result, er
 		return Result{}, fmt.Errorf("%w。%s", err, shorten(log.String()))
 	}
 	if len(samples) < 5 {
-		return Result{}, fmt.Errorf("有効なサンプルが %d 枚しかありません", len(samples))
+		return Result{}, fmt.Errorf("有効なサンプルは %d 枚", len(samples))
 	}
 	steady := samples
 	if len(samples) > 6 {
@@ -139,7 +138,7 @@ func Run(ffmpegPath, mtxPath string, frames, fps, bitrate, port int) (Result, er
 		Encoder:        "libx264",
 		FFmpegCPU:      cpu,
 		Path:           "生フレーム → libx264 zerolatency（スレッド2）→ ローカル RTSP/TCP → デコード",
-		Note:           "描いてから、デコーダを1スレッドにして RTSP を読み戻すまでの時間です。30fps では約1フレーム、60fps ではその半分になり、エンコードの待ちはフレーム間隔そのものです。再生側のバッファは含みません。Windows の NVENC は同程度の遅延で、CPU はほとんど使いません。",
+		Note:           "描画から、デコーダ 1 スレッドで RTSP を読むまで。30fps で約 1 フレーム、60fps で約半分。プレイヤーのバッファは入っていない。",
 	}, nil
 }
 
@@ -204,16 +203,16 @@ func probeSize(ctx context.Context, ffmpegPath, url string) (int, int, error) {
 	)
 	out, err := cmd.Output()
 	if err != nil {
-		return 0, 0, fmt.Errorf("映像サイズを読めませんでした: %w", err)
+		return 0, 0, fmt.Errorf("映像サイズが読めない: %w", err)
 	}
 	parts := strings.Split(strings.TrimSpace(string(out)), ",")
 	if len(parts) != 2 {
-		return 0, 0, fmt.Errorf("映像サイズを読めませんでした: %s", strings.TrimSpace(string(out)))
+		return 0, 0, fmt.Errorf("映像サイズが読めない: %s", strings.TrimSpace(string(out)))
 	}
 	w, errW := strconv.Atoi(parts[0])
 	h, errH := strconv.Atoi(parts[1])
 	if errW != nil || errH != nil {
-		return 0, 0, fmt.Errorf("映像サイズを読めませんでした: %s", strings.TrimSpace(string(out)))
+		return 0, 0, fmt.Errorf("映像サイズが読めない: %s", strings.TrimSpace(string(out)))
 	}
 	return w, h, nil
 }
@@ -275,7 +274,7 @@ func readSamples(ctx context.Context, ffmpegPath, url string, frames int) ([]int
 		}
 	}
 	if len(samples) == 0 {
-		return nil, fmt.Errorf("フレームを読めませんでした。%s", shorten(stderr.String()))
+		return nil, fmt.Errorf("フレームが読めない。%s", shorten(stderr.String()))
 	}
 	return samples, nil
 }

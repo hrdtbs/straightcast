@@ -44,10 +44,25 @@ func TestHealthAndPageContainProduct(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(body)
-	for _, want := range []string{"Straightcast", "rtspt", "1フレーム"} {
+	for _, want := range []string{"Straightcast", "rtspt", "1フレーム", "/icon.svg"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("page missing %s", want)
 		}
+	}
+	icon, err := http.Get(server.URL + "/icon.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer icon.Body.Close()
+	iconBody, err := io.ReadAll(icon.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if icon.StatusCode != http.StatusOK || !strings.Contains(icon.Header.Get("Content-Type"), "image/svg+xml") {
+		t.Fatalf("icon %d %s", icon.StatusCode, icon.Header.Get("Content-Type"))
+	}
+	if !strings.Contains(string(iconBody), "#1c1b16") {
+		t.Fatal("icon mark missing")
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 	"straightcast/internal/model"
 )
 
-//go:embed page.html
+//go:embed page.html icon.svg
 var files embed.FS
 
 // Controller は中継の操作です。
@@ -33,6 +33,16 @@ func Handler(ctrl Controller) http.Handler {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write(page)
+	})
+	mux.HandleFunc("GET /icon.svg", func(w http.ResponseWriter, _ *http.Request) {
+		body, err := files.ReadFile("icon.svg")
+		if err != nil {
+			http.Error(w, "画像を読めません", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})

@@ -67,6 +67,10 @@ func TestLiveNoteMentionsDesktopOnWindowsPath(t *testing.T) {
 	if liveNote(capture.SourceTest, false) == note {
 		t.Fatal("test source should differ")
 	}
+	windowNote := liveNote(capture.SourceWindow, true)
+	if !strings.Contains(windowNote, "GPU") || windowNote == note {
+		t.Fatal(windowNote)
+	}
 }
 
 func TestTailKeepsTheEnd(t *testing.T) {

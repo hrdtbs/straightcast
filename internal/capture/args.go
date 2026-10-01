@@ -30,6 +30,8 @@ type SourceKind string
 const (
 	// SourceDesktop は Windows の ddagrab です。
 	SourceDesktop SourceKind = "desktop"
+	// SourceWindow は Windows の gfxcapture です。
+	SourceWindow SourceKind = "window"
 	// SourceTest はテスト映像です。
 	SourceTest SourceKind = "test"
 	// SourceRaw は計測用の raw 入力です。
@@ -45,6 +47,7 @@ type Options struct {
 	FPS         int
 	BitrateKbps int
 	Monitor     int
+	Window      string
 	Width       int
 	Height      int
 	RTSPURL     string
@@ -101,6 +104,8 @@ func SourceLabel(kind SourceKind) string {
 	switch kind {
 	case SourceDesktop:
 		return "デスクトップ（DXGI）"
+	case SourceWindow:
+		return "指定ウィンドウ"
 	case SourceRaw:
 		return "計測用の映像"
 	default:
@@ -157,7 +162,8 @@ func NVENCAttempts(enc Encoder) []string {
 }
 
 // Normalize は範囲外の設定を配信できる値に直します。
-func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, error) {
+// window が空ならモニター全体です。入っていればそのタイトルを含むウィンドウです。
+func Normalize(id string, fps, bitrate, monitor int, encoder, window string) (Options, error) {
 	if !ValidID(id) {
 		return Options{}, fmt.Errorf("配信IDは英小文字、数字、ハイフンで3文字以上63文字以下にしてください")
 	}
@@ -181,17 +187,41 @@ func Normalize(id string, fps, bitrate, monitor int, encoder string) (Options, e
 	default:
 		return Options{}, fmt.Errorf("不明なエンコーダです")
 	}
+	title, source, err := cleanWindow(window, runtime.GOOS)
+	if err != nil {
+		return Options{}, err
+	}
 	return Options{
 		Encoder:     enc,
-		Source:      DefaultSource(runtime.GOOS),
+		Source:      source,
 		ID:          id,
 		FPS:         fps,
 		BitrateKbps: bitrate,
 		Monitor:     monitor,
+		Window:      title,
 		Width:       1280,
 		Height:      720,
 		Threads:     2,
 	}, nil
+}
+
+func cleanWindow(window, goos string) (string, SourceKind, error) {
+	window = strings.TrimSpace(window)
+	if window == "" {
+		return "", DefaultSource(goos), nil
+	}
+	if goos != "windows" {
+		return "", "", fmt.Errorf("ウィンドウの取り込みはWindowsだけです")
+	}
+	if len([]rune(window)) > 200 {
+		return "", "", fmt.Errorf("ウィンドウ名は200文字以下にしてください")
+	}
+	for _, r := range window {
+		if r < 0x20 || r == 0x7f {
+			return "", "", fmt.Errorf("ウィンドウ名に使えない文字があります")
+		}
+	}
+	return window, SourceWindow, nil
 }
 
 // PublishArgs は ffmpeg の引数です。音声は付けません。
@@ -232,6 +262,13 @@ func PublishArgs(o Options) ([]string, error) {
 	case SourceDesktop:
 		// ddagrab を使います。gdigrab は使いません。
 		spec := fmt.Sprintf("ddagrab=output_idx=%d:framerate=%d:draw_mouse=1", o.Monitor, o.FPS)
+		args = append(args, "-f", "lavfi", "-i", spec)
+	case SourceWindow:
+		// gfxcapture は d3d11 のまま出します。キャンバスサイズと fps フィルタは付けません。
+		spec, err := gfxcaptureSpec(o.Window, o.FPS)
+		if err != nil {
+			return nil, err
+		}
 		args = append(args, "-f", "lavfi", "-i", spec)
 	case SourceTest:
 		spec := fmt.Sprintf("testsrc2=size=%dx%d:rate=%d", o.Width, o.Height, o.FPS)
@@ -327,7 +364,7 @@ func encoderArgs(o Options) []string {
 		}
 	default:
 		args := []string{}
-		if o.Source == SourceDesktop {
+		if o.Source == SourceDesktop || o.Source == SourceWindow {
 			// libx264 のときだけ CPU に下ろし、幅を 1280 までにします。
 			args = append(args, "-vf", "hwdownload,format=bgra,scale='min(1280,iw)':-2:flags=fast_bilinear")
 		}
@@ -349,6 +386,59 @@ func encoderArgs(o Options) []string {
 		)
 		return args
 	}
+}
+
+// gfxcaptureSpec はウィンドウタイトルの一部一致です。大文字小文字は区別しません。
+func gfxcaptureSpec(window string, fps int) (string, error) {
+	window = strings.TrimSpace(window)
+	if window == "" {
+		return "", fmt.Errorf("ウィンドウ名が空です")
+	}
+	if fps < 1 {
+		return "", fmt.Errorf("フレームレートが不正です")
+	}
+	// 引用の中で正規表現の特殊文字を文字として扱います。幅と高さは渡しません。
+	pattern := lavfiQuote("(?i).*" + regexLiteral(window) + ".*")
+	return fmt.Sprintf(
+		"gfxcapture=window_title=%s:capture_cursor=1:capture_border=1:max_framerate=%d",
+		pattern, fps,
+	), nil
+}
+
+func regexLiteral(text string) string {
+	var b strings.Builder
+	for _, r := range text {
+		if strings.ContainsRune(`\^$.|?*+()[]{}`, r) {
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func lavfiQuote(text string) string {
+	var b strings.Builder
+	b.WriteByte('\'')
+	for _, r := range text {
+		if r == '\\' || r == '\'' {
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
+	}
+	b.WriteByte('\'')
+	return b.String()
+}
+
+// HasFilter は `ffmpeg -filters` の出力に名前があるかを見ます。
+func HasFilter(text, name string) bool {
+	for _, line := range strings.Split(text, "\n") {
+		for _, field := range strings.Fields(line) {
+			if field == name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ParseEncoderList は `ffmpeg -encoders` の出力から使える実装を拾います。

@@ -2,6 +2,8 @@
 
 Straightcastは、同じPCの画面をH.264にしてローカルのRTSPへ出せます。WindowsではDXGIのddagrabで画面を取ります。エンコーダはNVENC、Quick Sync、AMFの順です。いずれも無ければlibx264を使います。LinuxとmacOSではテスト映像を出します。
 
+ウィンドウ名を指定した場合は、そのウィンドウだけが対象です。取り込みはgfxcaptureで、フレームはGPU上のままエンコードします。
+
 受け側のURLは2種類です。`rtspt://`はTCPで、`rtsp://`はUDPです。同じPCで受ける場合はTCPを使ってください。
 
 配布物は実行ファイルとMediaMTXです。MediaMTXは受信した映像を再エンコードしません。
@@ -25,7 +27,7 @@ Bフレームとlookaheadは無効です。NVENCはpreset p1、tune ull、delay 
 
 バイナリは[Releases](https://github.com/hrdtbs/straightcast/releases)にあります。Windowsでは`straightcast_windows_amd64.zip`を展開し、`straightcast.exe`を起動してください。
 
-ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の`bin/ffmpeg.exe`に置いてください。`ddagrab`と`h264_nvenc`が必要です。MediaMTXが無い場合、初回起動時に`bin/`へ取得します。
+ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の`bin/ffmpeg.exe`に置いてください。`ddagrab`と`h264_nvenc`が必要です。ウィンドウだけを送るときは`gfxcapture`も必要です。MediaMTXが無い場合、初回起動時に`bin/`へ取得します。
 
 ## 使い方
 
@@ -39,7 +41,7 @@ go run ./cmd/straightcast
 
 画面に出た`rtspt://127.0.0.1:8554/...`をコピーしてください。コピー後にタブを閉じても、配信は続きます。
 
-LinuxとmacOSではデスクトップを取得できません。その場合はテスト映像を送ります。別のマシンから見るときは、ホスト欄を到達できるアドレスへ変えてください。UDPは届かないことがあります。
+LinuxとmacOSではデスクトップを取得できません。その場合はテスト映像を送ります。Windowsではウィンドウ名にタイトルの一部を入れると、そのウィンドウだけを送れます。名前が空のときはモニター全体です。別のマシンから見るときは、ホスト欄を到達できるアドレスへ変えてください。UDPは届かないことがあります。
 
 ## 開発
 

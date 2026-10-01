@@ -77,7 +77,7 @@ func (e *Engine) Apply(settings model.Settings) error {
 	if err != nil {
 		return err
 	}
-	opt, err := capture.Normalize(settings.ID, settings.FPS, settings.BitrateKbps, settings.Monitor, settings.Encoder)
+	opt, err := capture.Normalize(settings.ID, settings.FPS, settings.BitrateKbps, settings.Monitor, settings.Encoder, settings.Window)
 	if err != nil {
 		return err
 	}
@@ -91,6 +91,7 @@ func (e *Engine) Apply(settings model.Settings) error {
 		current.FPS == opt.FPS &&
 		current.BitrateKbps == opt.BitrateKbps &&
 		current.Monitor == opt.Monitor &&
+		current.Window == opt.Window &&
 		current.Encoder == string(opt.Encoder) {
 		e.mu.Lock()
 		e.snap.Host = host
@@ -130,6 +131,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 		FPS:         opt.FPS,
 		BitrateKbps: opt.BitrateKbps,
 		Monitor:     opt.Monitor,
+		Window:      opt.Window,
 		Encoder:     string(opt.Encoder),
 		Host:        host,
 		RTSPPort:    e.rtspPort,
@@ -248,6 +250,9 @@ func (e *Engine) stopLocked() {
 func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture.Encoder, string, *exec.Cmd, <-chan error, error) {
 	listed := encoderList(e.ffmpegPath)
 	preference := string(opt.Encoder)
+	if opt.Source == capture.SourceWindow && !capture.HasFilter(filterText(e.ffmpegPath), "gfxcapture") {
+		return "", "", nil, nil, fmt.Errorf("このffmpegにgfxcaptureがありません。gyan.devの新しいessentialsが必要です")
+	}
 	candidates := capture.Candidates(runtime.GOOS, preference, listed)
 	if len(candidates) == 0 {
 		return "", "", nil, nil, fmt.Errorf("H.264エンコーダがありません。ffmpegにlibx264、またはNVENC、QSV、AMFが必要です")
@@ -410,6 +415,12 @@ func probeVideo(ctx context.Context, ffprobe, rtspURL string) bool {
 	return false
 }
 
+func filterText(ffmpegPath string) string {
+	cmd := exec.Command(ffmpegPath, "-hide_banner", "-filters")
+	out, _ := cmd.Output()
+	return string(out)
+}
+
 func encoderList(ffmpegPath string) map[capture.Encoder]bool {
 	cmd := exec.Command(ffmpegPath, "-hide_banner", "-encoders")
 	out, _ := cmd.Output()
@@ -469,6 +480,12 @@ func cleanHost(host string) (string, error) {
 }
 
 func liveNote(source capture.SourceKind, hardware bool) string {
+	if source == capture.SourceWindow {
+		if !hardware {
+			return "libx264です。スレッド数は2で、幅は1280までに縮小します。"
+		}
+		return "指定したウィンドウをGPUで送っています。そのウィンドウを閉じると停止です。"
+	}
 	if source != capture.SourceDesktop {
 		return "このOSではデスクトップを取得できません。テスト映像を送っています。画面の取り込みはWindowsのddagrabです。"
 	}

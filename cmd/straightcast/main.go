@@ -48,6 +48,7 @@ func serve() error {
 	fps := flag.Int("fps", 30, "フレームレート（15, 24, 30, 60）")
 	bitrate := flag.Int("bitrate", 2500, "ビットレート kbps")
 	monitor := flag.Int("monitor", 0, "モニター番号")
+	window := flag.String("window", "", "ウィンドウタイトルの一部。空ならモニター全体")
 	encoder := flag.String("encoder", "auto", "auto, nvenc, qsv, amf, libx264")
 	noStart := flag.Bool("no-start", false, "起動時に配信しない")
 	flag.Parse()
@@ -85,6 +86,7 @@ func serve() error {
 			FPS:         *fps,
 			BitrateKbps: *bitrate,
 			Monitor:     *monitor,
+			Window:      *window,
 			Encoder:     *encoder,
 			Host:        "127.0.0.1",
 		}

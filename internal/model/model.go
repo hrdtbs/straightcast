@@ -17,6 +17,7 @@ type Settings struct {
 	Monitor     int    `json:"monitor"`
 	Encoder     string `json:"encoder"`
 	Host        string `json:"host"`
+	Window      string `json:"window"`
 }
 
 // Snapshot は制御画面が読む状態です。
@@ -27,6 +28,7 @@ type Snapshot struct {
 	FPS          int    `json:"fps"`
 	BitrateKbps  int    `json:"bitrateKbps"`
 	Monitor      int    `json:"monitor"`
+	Window       string `json:"window"`
 	Encoder      string `json:"encoder"`
 	EncoderLabel string `json:"encoderLabel"`
 	Hardware     bool   `json:"hardware"`

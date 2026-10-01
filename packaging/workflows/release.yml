@@ -78,7 +78,7 @@ jobs:
           body: |
             同じPCの画面をH.264にして、ローカルのRTSPへ出せます。
 
-            Windowsでは `straightcast_windows_amd64.zip` を展開し、`straightcast.exe` を起動してください。ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の `bin/ffmpeg.exe` に置いてください。`ddagrab` と `h264_nvenc` が必要です。
+            Windowsでは `straightcast_windows_amd64.zip` を展開し、`straightcast.exe` を起動してください。ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の `bin/ffmpeg.exe` に置いてください。`ddagrab` と `h264_nvenc` が必要です。ウィンドウだけを送るときは`gfxcapture`も必要です。
 
             MediaMTXが無い場合、初回起動時に `bin/` へ取得します。
 

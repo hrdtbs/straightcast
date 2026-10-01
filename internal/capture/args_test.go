@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -169,15 +170,139 @@ func TestRawMeasureHasNoDesktopGrab(t *testing.T) {
 }
 
 func TestNormalizeRejectsBadID(t *testing.T) {
-	if _, err := Normalize("A", 30, 2500, 0, "auto"); err == nil {
+	if _, err := Normalize("A", 30, 2500, 0, "auto", ""); err == nil {
 		t.Fatal("expected error")
 	}
-	got, err := Normalize("desk-1", 30, 2500, 0, "")
+	got, err := Normalize("desk-1", 30, 2500, 0, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Encoder != EncoderAuto || got.Threads != 2 {
+	if got.Encoder != EncoderAuto || got.Threads != 2 || got.Window != "" {
 		t.Fatalf("%+v", got)
+	}
+	if got.Source != DefaultSource(runtime.GOOS) {
+		t.Fatalf("source %s", got.Source)
+	}
+}
+
+func TestWindowNVENCStaysOnGPU(t *testing.T) {
+	args, err := PublishArgs(Options{
+		Encoder:     EncoderNVENC,
+		NVENCPreset: "p1",
+		Source:      SourceWindow,
+		Window:      "Notepad",
+		FPS:         30,
+		BitrateKbps: 2500,
+		RTSPURL:     "rtsp://127.0.0.1:8554/desk",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := inputSpec(t, args)
+	text := strings.Join(args, " ")
+	for _, want := range []string{
+		"gfxcapture=window_title='(?i).*Notepad.*'",
+		"capture_cursor=1",
+		"capture_border=1",
+		"max_framerate=30",
+		"-c:v h264_nvenc",
+		"-tune ull",
+		"-bufsize 83333",
+		"-fps_mode passthrough",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in %s", want, text)
+		}
+	}
+	for _, banned := range []string{
+		"hwdownload", "scale=", "gdigrab", "ddagrab", "display_border",
+		"width=", "height=", ",fps", " fps=", "-vf",
+	} {
+		if strings.Contains(spec, banned) || strings.Contains(text, banned) {
+			t.Fatalf("window hardware path should not contain %s: %s", banned, text)
+		}
+	}
+}
+
+func TestWindowTitleIsLiteral(t *testing.T) {
+	args, err := PublishArgs(Options{
+		Encoder: EncoderNVENC, Source: SourceWindow,
+		Window:      `C:\App (1): it's`,
+		FPS:         60,
+		BitrateKbps: 2500,
+		RTSPURL:     "rtsp://127.0.0.1:8554/desk",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := inputSpec(t, args)
+	want := `window_title='(?i).*C:\\\\App \\(1\\): it\'s.*':capture_cursor=1:capture_border=1:max_framerate=60`
+	if !strings.Contains(spec, want) {
+		t.Fatalf("spec %s", spec)
+	}
+	if strings.Contains(spec, "display_border") || strings.Contains(spec, ",fps") {
+		t.Fatal(spec)
+	}
+}
+
+func TestSoftwareWindowDownloads(t *testing.T) {
+	args, err := PublishArgs(Options{
+		Encoder: EncoderX264, Source: SourceWindow, Window: "Calc",
+		FPS: 30, BitrateKbps: 2500, Threads: 2,
+		RTSPURL: "rtsp://127.0.0.1:8554/a",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.Join(args, " ")
+	if !strings.Contains(text, "gfxcapture=") || !strings.Contains(text, "hwdownload,format=bgra") {
+		t.Fatal(text)
+	}
+	if strings.Contains(text, "gdigrab") || strings.Contains(text, "ddagrab") {
+		t.Fatal(text)
+	}
+}
+
+func TestEmptyWindowSpecFails(t *testing.T) {
+	_, err := PublishArgs(Options{
+		Encoder: EncoderNVENC, Source: SourceWindow, FPS: 30, BitrateKbps: 2500,
+		RTSPURL: "rtsp://127.0.0.1:8554/a",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestNormalizeWindow(t *testing.T) {
+	title, source, err := cleanWindow("  Notepad  ", "windows")
+	if err != nil || title != "Notepad" || source != SourceWindow {
+		t.Fatalf("%s %s %v", title, source, err)
+	}
+	if _, _, err := cleanWindow(strings.Repeat("あ", 201), "windows"); err == nil {
+		t.Fatal("expected length error")
+	}
+	if _, _, err := cleanWindow("bad\nname", "windows"); err == nil {
+		t.Fatal("expected char error")
+	}
+	if runtime.GOOS == "windows" {
+		got, err := Normalize("desk-1", 30, 2500, 2, "nvenc", "Notepad")
+		if err != nil || got.Source != SourceWindow || got.Monitor != 2 {
+			t.Fatalf("%+v %v", got, err)
+		}
+		return
+	}
+	if _, err := Normalize("desk-1", 30, 2500, 0, "auto", "Notepad"); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestHasFilter(t *testing.T) {
+	text := " ... gfxcapture       |->V       Capture windows\n T.C scale             V->V       Scale the input video\n"
+	if !HasFilter(text, "gfxcapture") || !HasFilter(text, "scale") {
+		t.Fatal("missing filter")
+	}
+	if HasFilter(text, "ddagrab") || HasFilter("notgfxcapture", "gfxcapture") {
+		t.Fatal("false match")
 	}
 }
 
@@ -187,6 +312,17 @@ func TestParseEncoderList(t *testing.T) {
 	if !found[EncoderX264] || !found[EncoderNVENC] || found[EncoderAMF] {
 		t.Fatal(found)
 	}
+}
+
+func inputSpec(t *testing.T, args []string) string {
+	t.Helper()
+	for i, arg := range args {
+		if arg == "-i" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	t.Fatal("no input")
+	return ""
 }
 
 func encoders(list []Encoder) []string {

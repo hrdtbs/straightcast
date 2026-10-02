@@ -80,7 +80,7 @@ func TestStartRejectsMalformedJSON(t *testing.T) {
 }
 
 func TestPageAndStop(t *testing.T) {
-	ctrl := &fake{snap: model.Snapshot{OK: true, Phase: model.PhaseLive, ID: "desk-abc", TCPURL: "rtspt://127.0.0.1:8554/desk-abc"}}
+	ctrl := &fake{snap: model.Snapshot{OK: true, Phase: model.PhaseLive, ID: "desk-abc", PublicURL: "rtsp://203.0.113.10:8554/desk-abc"}}
 	server := httptest.NewServer(Handler(ctrl))
 	defer server.Close()
 

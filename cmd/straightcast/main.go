@@ -88,15 +88,14 @@ func serve() error {
 			Monitor:     *monitor,
 			Window:      *window,
 			Encoder:     *encoder,
-			Host:        relay.SuggestedHost(),
 		}
 		go func() {
 			if err := engine.Apply(settings); err != nil {
 				log.Printf("配信を開始できません: %v", err)
 			} else {
 				snap := engine.Snapshot()
-				log.Printf("配信中 %s", snap.TCPURL)
 				log.Print(snap.EncoderLabel)
+				log.Print("共有URLは操作画面に出ます。")
 			}
 		}()
 	}

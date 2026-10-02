@@ -59,7 +59,6 @@ func New(ffmpegPath, mtxPath, rtspBind string) (*Engine, error) {
 			OK:       true,
 			Phase:    model.PhaseStopped,
 			RTSPPort: port,
-			Host:     SuggestedHost(),
 			Encoder:  "auto",
 		},
 	}, nil
@@ -72,15 +71,11 @@ func (e *Engine) Snapshot() model.Snapshot {
 	return e.snap
 }
 
-// Apply は設定を反映します。取り込みが同じなら URL のホストだけ替えます。
+// Apply は設定を反映します。取り込みが同じなら配信はそのままです。
 func (e *Engine) Apply(settings model.Settings) error {
 	e.op.Lock()
 	defer e.op.Unlock()
 
-	host, err := cleanHost(settings.Host)
-	if err != nil {
-		return err
-	}
 	opt, err := capture.Normalize(settings.ID, settings.FPS, settings.BitrateKbps, settings.Monitor, settings.Encoder, settings.Window)
 	if err != nil {
 		return err
@@ -97,16 +92,11 @@ func (e *Engine) Apply(settings model.Settings) error {
 		current.Monitor == opt.Monitor &&
 		current.Window == opt.Window &&
 		current.Encoder == string(opt.Encoder) {
-		e.mu.Lock()
-		e.snap.Host = host
-		e.snap.TCPURL = tcpURL(host, e.rtspPort, opt.ID)
-		e.snap.UDPURL = udpURL(host, e.rtspPort, opt.ID)
-		e.mu.Unlock()
 		return nil
 	}
 
 	e.stopLocked()
-	return e.startLocked(opt, host)
+	return e.startLocked(opt)
 }
 
 // Halt は配信を止めます。
@@ -125,7 +115,7 @@ func (e *Engine) Halt() {
 	e.mu.Unlock()
 }
 
-func (e *Engine) startLocked(opt capture.Options, host string) error {
+func (e *Engine) startLocked(opt capture.Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	e.mu.Lock()
 	e.gen++
@@ -140,10 +130,7 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 		Monitor:     opt.Monitor,
 		Window:      opt.Window,
 		Encoder:     string(opt.Encoder),
-		Host:        host,
 		RTSPPort:    e.rtspPort,
-		TCPURL:      tcpURL(host, e.rtspPort, opt.ID),
-		UDPURL:      udpURL(host, e.rtspPort, opt.ID),
 		Source:      string(opt.Source),
 		SourceLabel: capture.SourceLabel(opt.Source),
 		Note:        "起動しています。",
@@ -309,11 +296,23 @@ func (e *Engine) serveReach(gen int, id string) {
 		return
 	}
 	if err != nil || sess == nil {
-		e.snap.Reach = model.ReachFailed
-		e.snap.ReachNote = "外向けのURLを用意できませんでした。同じネットワークのURLを使ってください。"
-		e.snap.PublicURL = ""
 		e.mu.Unlock()
 		cancel()
+		if sess != nil {
+			sess.Close()
+		}
+		e.stopLocked()
+		e.mu.Lock()
+		if e.gen == gen+1 {
+			e.snap.Phase = model.PhaseError
+			e.snap.OK = false
+			e.snap.Error = "共有URLを用意できませんでした。"
+			e.snap.Reach = model.ReachFailed
+			e.snap.ReachNote = "別の場所からは、まだ映像を開けません。"
+			e.snap.PublicURL = ""
+			e.snap.Note = "停止しています。"
+		}
+		e.mu.Unlock()
 		return
 	}
 	e.reach = sess
@@ -351,13 +350,13 @@ func (e *Engine) applyReachLocked(id string) {
 	switch ep.Mode {
 	case expose.ModeDirect:
 		e.snap.Reach = model.ReachDirect
-		e.snap.ReachNote = "ルーターがTCPを転送しています。別のネットワークの人に、このURLを渡してください。"
+		e.snap.ReachNote = "ルーターがTCPを転送しています。このURLを、別の場所にいる人へ渡してください。"
 	case expose.ModeRelay:
 		e.snap.Reach = model.ReachRelay
-		e.snap.ReachNote = "中継を通して別のネットワークへ届きます。アドレスは約60分で変わることがあります。"
+		e.snap.ReachNote = "中継を通して別の場所へ届きます。アドレスは約60分で変わることがあります。"
 	default:
 		e.snap.Reach = ep.Mode
-		e.snap.ReachNote = "別のネットワークの人に、このURLを渡してください。"
+		e.snap.ReachNote = "このURLを、別の場所にいる人へ渡してください。"
 	}
 	log.Printf("共有 %s", e.snap.PublicURL)
 }
@@ -567,10 +566,6 @@ func tcpURL(host string, port int, id string) string {
 	return fmt.Sprintf("rtsp://%s:%d/%s", host, port, id)
 }
 
-func udpURL(host string, port int, id string) string {
-	return fmt.Sprintf("rtsp://%s:%d/%s", host, port, id)
-}
-
 func portOf(bind string) (int, error) {
 	if !strings.Contains(bind, ":") {
 		bind = ":" + bind
@@ -584,17 +579,6 @@ func portOf(bind string) (int, error) {
 		return 0, fmt.Errorf("RTSPのポートが不正です")
 	}
 	return port, nil
-}
-
-func cleanHost(host string) (string, error) {
-	host = strings.TrimSpace(host)
-	if host == "" {
-		return SuggestedHost(), nil
-	}
-	if len(host) > 253 || strings.ContainsAny(host, " /\t\r\n") || strings.Contains(host, "://") {
-		return "", fmt.Errorf("ホスト名が不正です")
-	}
-	return host, nil
 }
 
 func liveNote(source capture.SourceKind, hardware bool) string {

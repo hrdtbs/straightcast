@@ -24,7 +24,6 @@ type Settings struct {
 	BitrateKbps int    `json:"bitrateKbps"`
 	Monitor     int    `json:"monitor"`
 	Encoder     string `json:"encoder"`
-	Host        string `json:"host"`
 	Window      string `json:"window"`
 }
 
@@ -44,11 +43,8 @@ type Snapshot struct {
 	SourceLabel  string `json:"sourceLabel"`
 	Note         string `json:"note"`
 	Error        string `json:"error,omitempty"`
-	TCPURL       string `json:"tcpUrl"`
-	UDPURL       string `json:"udpUrl"`
 	PublicURL    string `json:"publicUrl"`
 	Reach        string `json:"reach"`
 	ReachNote    string `json:"reachNote"`
 	RTSPPort     int    `json:"rtspPort"`
-	Host         string `json:"host"`
 }

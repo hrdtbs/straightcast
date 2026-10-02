@@ -25,24 +25,6 @@ func TestPortOf(t *testing.T) {
 	}
 }
 
-func TestCleanHost(t *testing.T) {
-	host, err := cleanHost("  ")
-	if err != nil || host != SuggestedHost() {
-		t.Fatalf("%s %v", host, err)
-	}
-	host, err = cleanHost("127.0.0.1")
-	if err != nil || host != "127.0.0.1" {
-		t.Fatalf("%s %v", host, err)
-	}
-	host, err = cleanHost("192.168.1.20")
-	if err != nil || host != "192.168.1.20" {
-		t.Fatalf("%s %v", host, err)
-	}
-	if _, err := cleanHost("http://example"); err == nil {
-		t.Fatal("expected error")
-	}
-}
-
 func TestNewRejectsBadBind(t *testing.T) {
 	if _, err := New("ffmpeg", "mediamtx", "nope"); err == nil {
 		t.Fatal("expected error")

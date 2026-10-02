@@ -1,6 +1,6 @@
 #!/bin/sh
 # dist/ にアーカイブを出します。
-# 使い方: scripts/package.sh v0.1.0
+# 使い方: scripts/package.sh vX.Y.Z
 set -eu
 
 version="${1:-dev}"

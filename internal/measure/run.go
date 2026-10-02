@@ -137,7 +137,7 @@ func Run(ffmpegPath, mtxPath string, frames, fps, bitrate, port int) (Result, er
 		SteadyMedianMs: median(steady),
 		Encoder:        "libx264",
 		FFmpegCPU:      cpu,
-		Path:           "生フレーム → libx264 zerolatency（スレッド2）→ ローカル RTSP/TCP → デコード",
+		Path:           "生フレーム → libx264 zerolatency（スレッド2）→ RTSP/TCP → デコード",
 		Note:           "描画から、デコーダ1スレッドでRTSPを読むまでの時間です。30fpsでは約1フレーム、60fpsでは約半分になります。プレイヤーのバッファは含みません。",
 	}, nil
 }

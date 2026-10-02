@@ -2,5 +2,7 @@
 
 package platform
 
+import "context"
+
 // AllowInbound は Windows 以外では何もしません。
-func AllowInbound(string) {}
+func AllowInbound(context.Context, string, int) error { return nil }

@@ -75,6 +75,7 @@
       main[data-phase="live"] .mark { background: var(--live); }
       main[data-phase="error"] .mark { background: var(--danger); }
       main[data-phase="stopped"] .mark { background: #8d897f; }
+      main[data-reach="failed"] #public-url { color: var(--danger); }
       .phase { margin: 0; font-weight: 650; }
       main[data-phase="live"] .phase { color: var(--live); }
       main[data-phase="error"] .phase { color: var(--danger); }
@@ -180,7 +181,7 @@
       <header>
         <div>
           <h1>Straightcast</h1>
-          <p class="lead">このPCの画面をH.264のRTSPにします。</p>
+          <p class="lead">このPCの画面を、別の場所にいる人へ渡します。</p>
         </div>
       </header>
 
@@ -202,16 +203,16 @@
 
       <ul class="urls">
         <li>
-          <h2>rtspt</h2>
-          <p class="url" id="tcp-url">準備中</p>
-          <button type="button" class="ghost" id="copy-tcp">コピー</button>
-          <p class="hint">TCPです。他のPCへ渡すときはこちらを使ってください。</p>
+          <h2>共有</h2>
+          <p class="url" id="public-url">準備中</p>
+          <button type="button" class="ghost" id="copy-public">コピー</button>
+          <p class="hint" id="public-hint">別のネットワークの人に、このURLを渡してください。</p>
         </li>
         <li>
-          <h2>rtsp</h2>
-          <p class="url" id="udp-url">準備中</p>
-          <button type="button" class="ghost" id="copy-udp">コピー</button>
-          <p class="hint">UDPです。他のPCでは届かないことがあります。</p>
+          <h2>構内</h2>
+          <p class="url" id="tcp-url">準備中</p>
+          <button type="button" class="ghost" id="copy-tcp">コピー</button>
+          <p class="hint">同じネットワークの人には、こちらのURLを渡してください。</p>
         </li>
       </ul>
 
@@ -220,7 +221,7 @@
           <label>配信ID
             <input id="stream-id" name="id" autocomplete="off" spellcheck="false" required pattern="[a-z0-9][a-z0-9-]{2,62}" />
           </label>
-          <label>ホスト
+          <label>構内のアドレス
             <input id="host" name="host" autocomplete="off" spellcheck="false" placeholder="このPCのアドレス" />
           </label>
           <label>フレームレート
@@ -258,7 +259,7 @@
         </div>
         <p class="hint">待ちは約1フレームです。30fpsでは約33msです。60fpsでは約17msで、処理は2倍になります。ウィンドウ名はタイトルの一部です。空ならモニター全体を送ります。ウィンドウにはgfxcaptureのあるffmpegが必要です。</p>
       </form>
-      <p class="foot">キーフレームは約1秒です。プレビューはありません。</p>
+      <p class="foot">キーフレームは約1秒です。プレビューはありません。共有URLを知っている人は映像を見られます。</p>
     </main>
     <script>
       const phaseText = {
@@ -270,7 +271,7 @@
       const main = document.querySelector("main")
       const alertBox = document.getElementById("alert")
       let formReady = false
-      let urls = { tcp: "", udp: "" }
+      let urls = { tcp: "", public: "" }
       let clientError = ""
 
       function val(id) {
@@ -318,9 +319,19 @@
         document.getElementById("note").textContent = data.note || ""
         const meta = [data.encoderLabel, data.sourceLabel].filter(Boolean).join(" / ")
         document.getElementById("meta").textContent = meta
+        main.dataset.reach = data.reach || ""
+        let publicText = "準備中"
+        if (data.publicUrl) {
+          publicText = data.publicUrl
+        } else if (data.reach === "failed") {
+          publicText = "用意できませんでした"
+        } else if (phase === "stopped") {
+          publicText = "停止中"
+        }
+        document.getElementById("public-url").textContent = publicText
+        document.getElementById("public-hint").textContent = data.reachNote || "別のネットワークの人に、このURLを渡してください。"
         document.getElementById("tcp-url").textContent = data.tcpUrl || "まだありません"
-        document.getElementById("udp-url").textContent = data.udpUrl || "まだありません"
-        urls = { tcp: data.tcpUrl || "", udp: data.udpUrl || "" }
+        urls = { tcp: data.tcpUrl || "", public: data.publicUrl || "" }
         if (data.error) {
           clientError = ""
           showError(data.error)
@@ -373,11 +384,11 @@
 
       document.getElementById("target").addEventListener("change", syncTarget)
       syncTarget()
+      document.getElementById("copy-public").addEventListener("click", (event) => {
+        copyText(urls.public, event.currentTarget)
+      })
       document.getElementById("copy-tcp").addEventListener("click", (event) => {
         copyText(urls.tcp, event.currentTarget)
-      })
-      document.getElementById("copy-udp").addEventListener("click", (event) => {
-        copyText(urls.udp, event.currentTarget)
       })
       document.getElementById("form").addEventListener("submit", async (event) => {
         event.preventDefault()

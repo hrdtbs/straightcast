@@ -9,6 +9,14 @@ const (
 	PhaseError    = "error"
 )
 
+// 外向けURLの状態です。
+const (
+	ReachPending = "pending"
+	ReachDirect  = "direct"
+	ReachRelay   = "relay"
+	ReachFailed  = "failed"
+)
+
 // Settings は配信の設定です。
 type Settings struct {
 	ID          string `json:"id"`
@@ -38,6 +46,9 @@ type Snapshot struct {
 	Error        string `json:"error,omitempty"`
 	TCPURL       string `json:"tcpUrl"`
 	UDPURL       string `json:"udpUrl"`
+	PublicURL    string `json:"publicUrl"`
+	Reach        string `json:"reach"`
+	ReachNote    string `json:"reachNote"`
 	RTSPPort     int    `json:"rtspPort"`
 	Host         string `json:"host"`
 }

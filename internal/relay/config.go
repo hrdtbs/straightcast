@@ -23,7 +23,7 @@ authInternalUsers:
 
 rtsp: true
 rtspAddress: %s
-rtspTransports: [tcp, udp]
+rtspTransports: [tcp]
 rtspEncryption: "no"
 
 rtmp: false

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"straightcast/internal/capture"
+	"straightcast/internal/expose"
 	"straightcast/internal/model"
 	"straightcast/internal/platform"
 )
@@ -30,13 +32,15 @@ type Engine struct {
 	rtspBind   string
 	rtspPort   int
 
-	gen    int
-	cancel context.CancelFunc
-	mtx    *exec.Cmd
-	ff     *exec.Cmd
-	dir    string
-	log    *tail
-	snap   model.Snapshot
+	gen         int
+	cancel      context.CancelFunc
+	reachCancel context.CancelFunc
+	reach       *expose.Session
+	mtx         *exec.Cmd
+	ff          *exec.Cmd
+	dir         string
+	log         *tail
+	snap        model.Snapshot
 }
 
 // New はまだ配信していないエンジンです。
@@ -115,6 +119,9 @@ func (e *Engine) Halt() {
 	e.snap.OK = true
 	e.snap.Error = ""
 	e.snap.Note = "停止しています。"
+	e.snap.PublicURL = ""
+	e.snap.Reach = ""
+	e.snap.ReachNote = ""
 	e.mu.Unlock()
 }
 
@@ -160,7 +167,6 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 	e.dir = dir
 	e.mu.Unlock()
 
-	platform.AllowInbound(e.mtxPath)
 	used, preset, ff, wait, err := e.launchFFmpeg(ctx, opt)
 	if err != nil {
 		e.stopLocked()
@@ -184,10 +190,14 @@ func (e *Engine) startLocked(opt capture.Options, host string) error {
 	e.snap.EncoderLabel = label
 	e.snap.Hardware = hardware
 	e.snap.Note = liveNote(opt.Source, hardware)
+	e.snap.PublicURL = ""
+	e.snap.Reach = model.ReachPending
+	e.snap.ReachNote = "外向けのURLを用意しています。"
 	e.mu.Unlock()
 
 	go e.watch(gen, wait, "映像の送信")
 	go e.watch(gen, mtxWait, "RTSP")
+	go e.serveReach(gen, opt.ID)
 	return nil
 }
 
@@ -200,13 +210,27 @@ func (e *Engine) watch(gen int, waited <-chan error, name string) {
 		return
 	}
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	if e.gen != gen || e.snap.Phase == model.PhaseStopped {
+		e.mu.Unlock()
 		return
 	}
+	reach := e.reach
+	reachCancel := e.reachCancel
+	e.reach = nil
+	e.reachCancel = nil
 	e.snap.Phase = model.PhaseError
 	e.snap.OK = false
 	e.snap.Error = fmt.Sprintf("%sが止まりました。%s", name, shorten(e.log.String()))
+	e.snap.PublicURL = ""
+	e.snap.Reach = ""
+	e.snap.ReachNote = ""
+	e.mu.Unlock()
+	if reachCancel != nil {
+		reachCancel()
+	}
+	if reach != nil {
+		reach.Close()
+	}
 }
 
 func (e *Engine) fail(gen int, err error) {
@@ -230,14 +254,24 @@ func (e *Engine) stopLocked() {
 	e.mu.Lock()
 	e.gen++
 	cancel := e.cancel
+	reachCancel := e.reachCancel
+	reach := e.reach
 	mtx := e.mtx
 	ff := e.ff
 	dir := e.dir
 	e.cancel = nil
+	e.reachCancel = nil
+	e.reach = nil
 	e.mtx = nil
 	e.ff = nil
 	e.dir = ""
 	e.mu.Unlock()
+	if reachCancel != nil {
+		reachCancel()
+	}
+	if reach != nil {
+		reach.Close()
+	}
 	if cancel != nil {
 		cancel()
 	}
@@ -246,6 +280,86 @@ func (e *Engine) stopLocked() {
 	if dir != "" {
 		_ = os.RemoveAll(dir)
 	}
+}
+
+func (e *Engine) serveReach(gen int, id string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	e.mu.Lock()
+	if e.gen != gen {
+		e.mu.Unlock()
+		cancel()
+		return
+	}
+	e.reachCancel = cancel
+	e.mu.Unlock()
+
+	sess, err := expose.Open(ctx, e.rtspPort, func(ctx context.Context) error {
+		return platform.AllowInbound(ctx, e.mtxPath, e.rtspPort)
+	})
+	if err != nil {
+		log.Printf("外向けURL: %v", err)
+	}
+	e.mu.Lock()
+	if e.gen != gen {
+		e.mu.Unlock()
+		cancel()
+		if sess != nil {
+			sess.Close()
+		}
+		return
+	}
+	if err != nil || sess == nil {
+		e.snap.Reach = model.ReachFailed
+		e.snap.ReachNote = "外向けのURLを用意できませんでした。同じネットワークのURLを使ってください。"
+		e.snap.PublicURL = ""
+		e.mu.Unlock()
+		cancel()
+		return
+	}
+	e.reach = sess
+	e.applyReachLocked(id)
+	e.mu.Unlock()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case _, ok := <-sess.Updates():
+			if !ok {
+				return
+			}
+			e.mu.Lock()
+			if e.gen != gen {
+				e.mu.Unlock()
+				return
+			}
+			e.applyReachLocked(id)
+			e.mu.Unlock()
+		}
+	}
+}
+
+func (e *Engine) applyReachLocked(id string) {
+	if e.reach == nil {
+		return
+	}
+	ep := e.reach.Endpoint()
+	if ep.Host == "" || ep.Port == 0 {
+		return
+	}
+	e.snap.PublicURL = tcpURL(ep.Host, ep.Port, id)
+	switch ep.Mode {
+	case expose.ModeDirect:
+		e.snap.Reach = model.ReachDirect
+		e.snap.ReachNote = "ルーターがTCPを転送しています。別のネットワークの人に、このURLを渡してください。"
+	case expose.ModeRelay:
+		e.snap.Reach = model.ReachRelay
+		e.snap.ReachNote = "中継を通して別のネットワークへ届きます。アドレスは約60分で変わることがあります。"
+	default:
+		e.snap.Reach = ep.Mode
+		e.snap.ReachNote = "別のネットワークの人に、このURLを渡してください。"
+	}
+	log.Printf("共有 %s", e.snap.PublicURL)
 }
 
 func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture.Encoder, string, *exec.Cmd, <-chan error, error) {
@@ -447,7 +561,10 @@ func publishURL(port int, id string) string {
 }
 
 func tcpURL(host string, port int, id string) string {
-	return fmt.Sprintf("rtspt://%s:%d/%s", host, port, id)
+	if strings.Contains(host, ":") && !strings.HasPrefix(host, "[") {
+		host = "[" + host + "]"
+	}
+	return fmt.Sprintf("rtsp://%s:%d/%s", host, port, id)
 }
 
 func udpURL(host string, port int, id string) string {

@@ -189,7 +189,7 @@ func existingBinary(dirs, names []string) string {
 }
 
 func randomID() string {
-	var buf [3]byte
+	var buf [8]byte
 	_, _ = rand.Read(buf[:])
 	return fmt.Sprintf("desk-%x", buf)
 }

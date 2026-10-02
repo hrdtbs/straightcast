@@ -9,7 +9,7 @@ func TestMediaMTXConfigDisablesExtraProtocols(t *testing.T) {
 	text := MediaMTXConfig(":8554")
 	for _, want := range []string{
 		"rtspAddress: :8554",
-		"rtspTransports: [tcp, udp]",
+		"rtspTransports: [tcp]",
 		"webrtc: false",
 		"rtmp: false",
 		"hls: false",

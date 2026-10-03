@@ -76,10 +76,6 @@ jobs:
         with:
           files: artifacts/*
           body: |
-            このPCの画面を、別の場所にいる人へ渡します。操作画面の共有URLを相手に渡してください。
+            Windowsは `straightcast_windows_amd64.zip` を展開し、`straightcast.exe` を起動してください。
 
-            Windowsでは `straightcast_windows_amd64.zip` を展開し、`straightcast.exe` を起動してください。ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の `bin/ffmpeg.exe` に置いてください。`ddagrab` と `h264_nvenc` が必要です。ウィンドウだけを送るときは`gfxcapture`も必要です。
-
-            MediaMTXが無い場合、初回起動時に `bin/` へ取得します。
-
-            操作画面は http://127.0.0.1:43123 です。共有URLはTCPです。ルーターが転送できないときは、このPCから外へ中継します。中継のアドレスは約60分で変わることがあります。
+            ffmpegは同梱していません。[gyan.devのessentials](https://www.gyan.dev/ffmpeg/builds/)をPATHへ通すか、exeの隣の `bin/ffmpeg.exe` に置いてください。

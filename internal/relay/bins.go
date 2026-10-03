@@ -53,7 +53,7 @@ func FindFFmpeg(binDir string) (string, error) {
 	}
 	path, err := exec.LookPath(name)
 	if err != nil {
-		return "", fmt.Errorf("ffmpegがありません。Windowsではhttps://www.gyan.dev/ffmpeg/builds/ のessentialsをPATHかbinに置いてください")
+		return "", fmt.Errorf("ffmpegがありません")
 	}
 	return path, nil
 }

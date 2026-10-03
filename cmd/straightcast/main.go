@@ -42,15 +42,15 @@ func main() {
 }
 
 func serve() error {
-	httpAddr := flag.String("http", "127.0.0.1:43123", "制御画面の待受")
-	rtspBind := flag.String("rtsp", ":8554", "RTSP の待受")
-	id := flag.String("id", "", "配信 ID。空なら自動")
-	fps := flag.Int("fps", 30, "フレームレート（15, 24, 30, 60）")
+	httpAddr := flag.String("http", "127.0.0.1:43123", "待受")
+	rtspBind := flag.String("rtsp", ":8554", "RTSP")
+	id := flag.String("id", "", "配信ID")
+	fps := flag.Int("fps", 30, "フレームレート")
 	bitrate := flag.Int("bitrate", 2500, "ビットレート kbps")
-	monitor := flag.Int("monitor", 0, "モニター番号")
-	window := flag.String("window", "", "ウィンドウタイトルの一部。空ならモニター全体")
+	monitor := flag.Int("monitor", 0, "モニター")
+	window := flag.String("window", "", "ウィンドウ名")
 	encoder := flag.String("encoder", "auto", "auto, nvenc, qsv, amf, libx264")
-	noStart := flag.Bool("no-start", false, "起動時に配信しない")
+	noStart := flag.Bool("no-start", false, "起動時は配信しない")
 	flag.Parse()
 
 	ffmpegPath, mtxPath, err := findTools()
@@ -92,15 +92,11 @@ func serve() error {
 		go func() {
 			if err := engine.Apply(settings); err != nil {
 				log.Printf("配信を開始できません: %v", err)
-			} else {
-				snap := engine.Snapshot()
-				log.Print(snap.EncoderLabel)
-				log.Print("共有URLは操作画面に出ます。")
 			}
 		}()
 	}
 
-	log.Printf("制御画面 http://%s", *httpAddr)
+	log.Printf("http://%s", *httpAddr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
@@ -109,10 +105,10 @@ func serve() error {
 
 func runMeasure(args []string) error {
 	fs := flag.NewFlagSet("measure", flag.ContinueOnError)
-	frames := fs.Int("frames", 18, "読むフレーム数")
+	frames := fs.Int("frames", 18, "フレーム数")
 	fps := fs.Int("fps", 30, "フレームレート")
 	bitrate := fs.Int("bitrate", 2500, "ビットレート kbps")
-	port := fs.Int("port", 8554, "RTSP ポート")
+	port := fs.Int("port", 8554, "RTSP")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -138,7 +134,7 @@ func findTools() (string, string, error) {
 		}
 	}
 	if ffmpegPath == "" {
-		return "", "", fmt.Errorf("ffmpegがありません。Windowsではhttps://www.gyan.dev/ffmpeg/builds/ のessentialsをPATHかbinに置いてください")
+		return "", "", fmt.Errorf("ffmpegがありません")
 	}
 	if path := existingBinary(dirs, mediaMTXNames()); path != "" {
 		return ffmpegPath, path, nil

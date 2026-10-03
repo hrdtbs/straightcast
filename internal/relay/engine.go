@@ -108,7 +108,7 @@ func (e *Engine) Halt() {
 	e.snap.Phase = model.PhaseStopped
 	e.snap.OK = true
 	e.snap.Error = ""
-	e.snap.Note = "停止しています。"
+	e.snap.Note = ""
 	e.snap.PublicURL = ""
 	e.snap.Reach = ""
 	e.snap.ReachNote = ""
@@ -133,7 +133,6 @@ func (e *Engine) startLocked(opt capture.Options) error {
 		RTSPPort:    e.rtspPort,
 		Source:      string(opt.Source),
 		SourceLabel: capture.SourceLabel(opt.Source),
-		Note:        "起動しています。",
 	}
 	e.mu.Unlock()
 
@@ -176,10 +175,10 @@ func (e *Engine) startLocked(opt capture.Options) error {
 	e.snap.Encoder = string(opt.Encoder)
 	e.snap.EncoderLabel = label
 	e.snap.Hardware = hardware
-	e.snap.Note = liveNote(opt.Source, hardware)
+	e.snap.Note = ""
 	e.snap.PublicURL = ""
 	e.snap.Reach = model.ReachPending
-	e.snap.ReachNote = "外向けのURLを用意しています。"
+	e.snap.ReachNote = ""
 	e.mu.Unlock()
 
 	go e.watch(gen, wait, "映像の送信")
@@ -308,9 +307,9 @@ func (e *Engine) serveReach(gen int, id string) {
 			e.snap.OK = false
 			e.snap.Error = "共有URLを用意できませんでした。"
 			e.snap.Reach = model.ReachFailed
-			e.snap.ReachNote = "別の場所からは、まだ映像を開けません。"
+			e.snap.ReachNote = ""
 			e.snap.PublicURL = ""
-			e.snap.Note = "停止しています。"
+			e.snap.Note = ""
 		}
 		e.mu.Unlock()
 		return
@@ -347,16 +346,14 @@ func (e *Engine) applyReachLocked(id string) {
 		return
 	}
 	e.snap.PublicURL = tcpURL(ep.Host, ep.Port, id)
+	e.snap.ReachNote = ""
 	switch ep.Mode {
 	case expose.ModeDirect:
 		e.snap.Reach = model.ReachDirect
-		e.snap.ReachNote = "ルーターがTCPを転送しています。このURLを、別の場所にいる人へ渡してください。"
 	case expose.ModeRelay:
 		e.snap.Reach = model.ReachRelay
-		e.snap.ReachNote = "中継を通して別の場所へ届きます。アドレスは約60分で変わることがあります。"
 	default:
 		e.snap.Reach = ep.Mode
-		e.snap.ReachNote = "このURLを、別の場所にいる人へ渡してください。"
 	}
 	log.Printf("共有 %s", e.snap.PublicURL)
 }
@@ -365,11 +362,11 @@ func (e *Engine) launchFFmpeg(ctx context.Context, opt capture.Options) (capture
 	listed := encoderList(e.ffmpegPath)
 	preference := string(opt.Encoder)
 	if opt.Source == capture.SourceWindow && !capture.HasFilter(filterText(e.ffmpegPath), "gfxcapture") {
-		return "", "", nil, nil, fmt.Errorf("このffmpegにgfxcaptureがありません。gyan.devの新しいessentialsが必要です")
+		return "", "", nil, nil, fmt.Errorf("gfxcaptureがありません")
 	}
 	candidates := capture.Candidates(runtime.GOOS, preference, listed)
 	if len(candidates) == 0 {
-		return "", "", nil, nil, fmt.Errorf("H.264エンコーダがありません。ffmpegにlibx264、またはNVENC、QSV、AMFが必要です")
+		return "", "", nil, nil, fmt.Errorf("H.264エンコーダがありません")
 	}
 	var last error
 	for _, enc := range candidates {
@@ -579,22 +576,6 @@ func portOf(bind string) (int, error) {
 		return 0, fmt.Errorf("RTSPのポートが不正です")
 	}
 	return port, nil
-}
-
-func liveNote(source capture.SourceKind, hardware bool) string {
-	if source == capture.SourceWindow {
-		if !hardware {
-			return "libx264です。スレッド数は2で、幅は1280までに縮小します。"
-		}
-		return "指定したウィンドウをGPUで送っています。そのウィンドウを閉じると停止です。"
-	}
-	if source != capture.SourceDesktop {
-		return "このOSではデスクトップを取得できません。テスト映像を送っています。画面の取り込みはWindowsのddagrabです。"
-	}
-	if !hardware {
-		return "libx264です。スレッド数は2で、幅は1280までに縮小します。"
-	}
-	return "GPUのエンコーダを使っています。タブを閉じても配信は続きます。"
 }
 
 func shorten(text string) string {

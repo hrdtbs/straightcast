@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"straightcast/internal/capture"
 	"straightcast/internal/model"
 )
 
@@ -42,20 +41,6 @@ func TestApplyRejectsBadSettings(t *testing.T) {
 	}
 	if engine.Snapshot().Phase != model.PhaseStopped {
 		t.Fatalf("phase %s", engine.Snapshot().Phase)
-	}
-}
-
-func TestLiveNoteMentionsDesktopOnWindowsPath(t *testing.T) {
-	note := liveNote(capture.SourceDesktop, true)
-	if !strings.Contains(note, "GPU") {
-		t.Fatal(note)
-	}
-	if liveNote(capture.SourceTest, false) == note {
-		t.Fatal("test source should differ")
-	}
-	windowNote := liveNote(capture.SourceWindow, true)
-	if !strings.Contains(windowNote, "GPU") || windowNote == note {
-		t.Fatal(windowNote)
 	}
 }
 

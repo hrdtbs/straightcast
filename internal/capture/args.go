@@ -93,21 +93,21 @@ func EncoderLabel(enc Encoder, preset string) string {
 	case EncoderAMF:
 		return "AMD AMF"
 	case EncoderX264:
-		return "libx264、スレッド 2"
+		return "libx264"
 	default:
 		return string(enc)
 	}
 }
 
-// SourceLabel は画面に出す取り込みの説明です。
+// SourceLabel は取り込みの名前です。
 func SourceLabel(kind SourceKind) string {
 	switch kind {
 	case SourceDesktop:
-		return "デスクトップ（DXGI）"
+		return "デスクトップ"
 	case SourceWindow:
-		return "指定ウィンドウ"
+		return "ウィンドウ"
 	case SourceRaw:
-		return "計測用の映像"
+		return "計測"
 	default:
 		return "テスト映像"
 	}
@@ -165,18 +165,18 @@ func NVENCAttempts(enc Encoder) []string {
 // window が空ならモニター全体です。入っていればそのタイトルを含むウィンドウです。
 func Normalize(id string, fps, bitrate, monitor int, encoder, window string) (Options, error) {
 	if !ValidID(id) {
-		return Options{}, fmt.Errorf("配信IDは英小文字、数字、ハイフンで3文字以上63文字以下にしてください")
+		return Options{}, fmt.Errorf("配信IDが不正です")
 	}
 	switch fps {
 	case 15, 24, 30, 60:
 	default:
-		return Options{}, fmt.Errorf("フレームレートは15、24、30、60のいずれかを指定してください")
+		return Options{}, fmt.Errorf("フレームレートが不正です")
 	}
 	if bitrate < 800 || bitrate > 12000 {
-		return Options{}, fmt.Errorf("ビットレートは800から12000kbpsの範囲にしてください")
+		return Options{}, fmt.Errorf("ビットレートが不正です")
 	}
 	if monitor < 0 || monitor > 8 {
-		return Options{}, fmt.Errorf("モニター番号は0から8にしてください")
+		return Options{}, fmt.Errorf("モニター番号が不正です")
 	}
 	enc := Encoder(encoder)
 	switch enc {
@@ -214,7 +214,7 @@ func cleanWindow(window, goos string) (string, SourceKind, error) {
 		return "", "", fmt.Errorf("ウィンドウの取り込みはWindowsだけです")
 	}
 	if len([]rune(window)) > 200 {
-		return "", "", fmt.Errorf("ウィンドウ名は200文字以下にしてください")
+		return "", "", fmt.Errorf("ウィンドウ名が長すぎます")
 	}
 	for _, r := range window {
 		if r < 0x20 || r == 0x7f {
